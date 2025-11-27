@@ -106,6 +106,59 @@
 </script>
 </head>
   <body>
+    <body>
+  <script>
+    (function () {
+      function getOverlay() {
+        var overlay = document.getElementById('error-overlay');
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.id = 'error-overlay';
+          overlay.style.position = 'fixed';
+          overlay.style.inset = '0';
+          overlay.style.background = 'rgba(0, 0, 0, 0.9)';
+          overlay.style.color = '#fff';
+          overlay.style.zIndex = '99999';
+          overlay.style.padding = '16px';
+          overlay.style.fontFamily = 'monospace';
+          overlay.style.whiteSpace = 'pre-wrap';
+          overlay.style.overflow = 'auto';
+          overlay.textContent = 'Yükleniyor...';
+          document.body.appendChild(overlay);
+        }
+        return overlay;
+      }
+
+      window.addEventListener('error', function (event) {
+        try {
+          var overlay = getOverlay();
+          overlay.textContent =
+            'JAVASCRIPT ERROR:\\n\\n' +
+            (event.message || '') + '\\n' +
+            (event.filename || '') + ':' + (event.lineno || '') +
+            '\\n\\nBu ekranın ekran görüntüsünü alıp ChatGPT’ye gönder.';
+        } catch (e) {
+          console.log('overlay error', e);
+        }
+      });
+
+      window.addEventListener('unhandledrejection', function (event) {
+        try {
+          var overlay = getOverlay();
+          overlay.textContent =
+            'UNHANDLED PROMISE REJECTION:\\n\\n' +
+            String(event.reason) +
+            '\\n\\nBu ekranın ekran görüntüsünü alıp ChatGPT’ye gönder.';
+        } catch (e) {
+          console.log('overlay error', e);
+        }
+      });
+    })();
+  </script>
+
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
     <div id="root"></div>
   </body>
 </html>
