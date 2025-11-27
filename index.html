@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Ejderha Mirası</title>
     <script src="https://cdn.tailwindcss.com"></script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
     <script>
       tailwind.config = {
         theme: {
@@ -31,37 +33,12 @@
               'pixel-inset': 'inset 4px 4px 0px 0px rgba(0,0,0,0.2)',
               'device': '8px 8px 0px 0px rgba(0,0,0,0.25)',
               'screen-inner': 'inset 0 0 20px rgba(0,0,0,0.1)',
-            },
-            animation: {
-              'bounce-pixel': 'bounce-pixel 1s infinite',
-              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              'breathe': 'breathe 3s ease-in-out infinite',
-              'shiver': 'shiver 0.2s ease-in-out infinite',
-              'wobble': 'wobble 1s ease-in-out infinite',
-            },
-            keyframes: {
-              'bounce-pixel': {
-                '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-4px)' },
-              },
-              'breathe': {
-                '0%, 100%': { transform: 'scaleY(1) scaleX(1)' },
-                '50%': { transform: 'scaleY(1.05) scaleX(0.95) translateY(2px)' },
-              },
-              'shiver': {
-                '0%, 100%': { transform: 'translateX(0)' },
-                '25%': { transform: 'translateX(-2px)' },
-                '75%': { transform: 'translateX(2px)' },
-              },
-              'wobble': {
-                '0%, 100%': { transform: 'rotate(-3deg)' },
-                '50%': { transform: 'rotate(3deg)' },
-              }
             }
           },
         },
       }
     </script>
+
     <style>
       html, body, #root {
         height: 100%;
@@ -82,83 +59,65 @@
       .material-symbols-outlined {
         font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
       }
-      /* Custom Scrollbar for Market */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #9e9f83; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #21221d; 
-        border: 2px solid #9e9f83;
-      }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/"
-  }
-}
-</script>
-</head>
-  <body>
-    <body>
-  <script>
-    (function () {
-      function getOverlay() {
-        var overlay = document.getElementById('error-overlay');
-        if (!overlay) {
-          overlay = document.createElement('div');
-          overlay.id = 'error-overlay';
-          overlay.style.position = 'fixed';
-          overlay.style.inset = '0';
-          overlay.style.background = 'rgba(0, 0, 0, 0.9)';
-          overlay.style.color = '#fff';
-          overlay.style.zIndex = '99999';
-          overlay.style.padding = '16px';
-          overlay.style.fontFamily = 'monospace';
-          overlay.style.whiteSpace = 'pre-wrap';
-          overlay.style.overflow = 'auto';
-          overlay.textContent = 'Yükleniyor...';
-          document.body.appendChild(overlay);
-        }
-        return overlay;
+
+    <script type="importmap">
+    {
+      "imports": {
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/"
       }
+    }
+    </script>
+  </head>
 
-      window.addEventListener('error', function (event) {
-        try {
+  <body>
+
+    <!-- Error Overlay - iPad Safari için Debug -->
+    <script>
+      (function () {
+        function getOverlay() {
+          var overlay = document.getElementById('error-overlay');
+          if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'error-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.background = 'rgba(0, 0, 0, 0.9)';
+            overlay.style.color = '#fff';
+            overlay.style.zIndex = '99999';
+            overlay.style.padding = '16px';
+            overlay.style.fontFamily = 'monospace';
+            overlay.style.whiteSpace = 'pre-wrap';
+            overlay.style.overflow = 'auto';
+            overlay.textContent = 'Yükleniyor...';
+            document.body.appendChild(overlay);
+          }
+          return overlay;
+        }
+
+        window.addEventListener('error', function (event) {
           var overlay = getOverlay();
           overlay.textContent =
-            'JAVASCRIPT ERROR:\\n\\n' +
-            (event.message || '') + '\\n' +
+            'JAVASCRIPT ERROR:\n\n' +
+            (event.message || '') + '\n' +
             (event.filename || '') + ':' + (event.lineno || '') +
-            '\\n\\nBu ekranın ekran görüntüsünü alıp ChatGPT’ye gönder.';
-        } catch (e) {
-          console.log('overlay error', e);
-        }
-      });
+            '\n\nEkran görüntüsü alıp bana gönder!';
+        });
 
-      window.addEventListener('unhandledrejection', function (event) {
-        try {
+        window.addEventListener('unhandledrejection', function (event) {
           var overlay = getOverlay();
           overlay.textContent =
-            'UNHANDLED PROMISE REJECTION:\\n\\n' +
+            'PROMISE REJECTION:\n\n' +
             String(event.reason) +
-            '\\n\\nBu ekranın ekran görüntüsünü alıp ChatGPT’ye gönder.';
-        } catch (e) {
-          console.log('overlay error', e);
-        }
-      });
-    })();
-  </script>
+            '\n\nEkran görüntüsü alıp bana gönder!';
+        });
+      })();
+    </script>
 
-  <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+
   </body>
 </html>
