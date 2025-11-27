@@ -2,21 +2,34 @@
 <html lang="tr">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>Ejderha Mirası</title>
+
+    <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      rel="stylesheet"
+    />
 
+    <!-- Tailwind theme -->
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              "shell": "#b91c1c",
+              shell: "#b91c1c",
               "shell-dark": "#7f1d1d",
               "lcd-bg": "#9e9f83",
               "lcd-fg": "#21221d",
@@ -25,22 +38,24 @@
               "btn-yellow-dark": "#ca8a04",
             },
             fontFamily: {
-              "pixel": ["'Press Start 2P'", "cursive"],
-              "retro": ["'VT323'", "monospace"],
+              pixel: ["'Press Start 2P'", "cursive"],
+              retro: ["'VT323'", "monospace"],
             },
             boxShadow: {
-              'pixel': '4px 4px 0px 0px rgba(0,0,0,0.3)',
-              'pixel-inset': 'inset 4px 4px 0px 0px rgba(0,0,0,0.2)',
-              'device': '8px 8px 0px 0px rgba(0,0,0,0.25)',
-              'screen-inner': 'inset 0 0 20px rgba(0,0,0,0.1)',
-            }
+              pixel: "4px 4px 0px 0px rgba(0,0,0,0.3)",
+              "pixel-inset": "inset 4px 4px 0px 0px rgba(0,0,0,0.2)",
+              device: "8px 8px 0px 0px rgba(0,0,0,0.25)",
+              "screen-inner": "inset 0 0 20px rgba(0,0,0,0.1)",
+            },
           },
         },
-      }
+      };
     </script>
 
     <style>
-      html, body, #root {
+      html,
+      body,
+      #root {
         height: 100%;
         margin: 0;
         padding: 0;
@@ -57,67 +72,14 @@
         image-rendering: crisp-edges;
       }
       .material-symbols-outlined {
-        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
       }
     </style>
-
-    <script type="importmap">
-    {
-      "imports": {
-        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-        "react": "https://aistudiocdn.com/react@^19.2.0",
-        "react/": "https://aistudiocdn.com/react@^19.2.0/"
-      }
-    }
-    </script>
   </head>
 
   <body>
-
-    <!-- Error Overlay - iPad Safari için Debug -->
-    <script>
-      (function () {
-        function getOverlay() {
-          var overlay = document.getElementById('error-overlay');
-          if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'error-overlay';
-            overlay.style.position = 'fixed';
-            overlay.style.inset = '0';
-            overlay.style.background = 'rgba(0, 0, 0, 0.9)';
-            overlay.style.color = '#fff';
-            overlay.style.zIndex = '99999';
-            overlay.style.padding = '16px';
-            overlay.style.fontFamily = 'monospace';
-            overlay.style.whiteSpace = 'pre-wrap';
-            overlay.style.overflow = 'auto';
-            overlay.textContent = 'Yükleniyor...';
-            document.body.appendChild(overlay);
-          }
-          return overlay;
-        }
-
-        window.addEventListener('error', function (event) {
-          var overlay = getOverlay();
-          overlay.textContent =
-            'JAVASCRIPT ERROR:\n\n' +
-            (event.message || '') + '\n' +
-            (event.filename || '') + ':' + (event.lineno || '') +
-            '\n\nEkran görüntüsü alıp bana gönder!';
-        });
-
-        window.addEventListener('unhandledrejection', function (event) {
-          var overlay = getOverlay();
-          overlay.textContent =
-            'PROMISE REJECTION:\n\n' +
-            String(event.reason) +
-            '\n\nEkran görüntüsü alıp bana gönder!';
-        });
-      })();
-    </script>
-
     <div id="root"></div>
+    <!-- Vite entry point -->
     <script type="module" src="/index.tsx"></script>
-
   </body>
 </html>
