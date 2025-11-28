@@ -152,7 +152,7 @@ const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
     ],
     palette: ['transparent', '#eab308', '#a16207', '#ec4899'],
   },
-  STAR: {
+   STAR: {
     grid: [
       [0, 0, 0, 1, 0, 0, 0, 0],
       [0, 0, 1, 1, 1, 0, 0, 0],
@@ -165,7 +165,20 @@ const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
     ],
     palette: ['transparent', '#facc15'],
   },
-};
+  CIRCUS_RING: {
+    grid: [
+      [0, 0, 0, 2, 2, 0, 0, 0],
+      [0, 0, 2, 1, 1, 2, 0, 0],
+      [0, 2, 1, 0, 0, 1, 2, 0],
+      [0, 2, 1, 0, 0, 1, 2, 0],
+      [0, 2, 1, 0, 0, 1, 2, 0],
+      [0, 0, 2, 1, 1, 2, 0, 0],
+      [0, 0, 0, 3, 3, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0],
+    ],
+    // 1: sarı halka, 2: kırmızı ateş, 3: turuncu dip alev
+    palette: ['transparent', '#facc15', '#ef4444', '#f97316'],
+  },};
 
 const ProceduralIcon = ({
   type,
