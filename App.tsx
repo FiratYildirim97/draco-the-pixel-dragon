@@ -389,6 +389,16 @@ const ProceduralDragon = ({
         ctx.fillStyle = '#b91c1c';
         ctx.fillRect(sx, sy, 8 * scale, 2 * scale);
         ctx.fillRect(sx + 2 * scale, sy + 2 * scale, 2 * scale, 3 * scale);
+        } else if (type === 'star_charm') {
+        // Yıldız tılsımı: Draco'nun sağ tarafında küçük piksel yıldız
+        const sx = headLogicalX + 4 * scale;
+        const sy = headLogicalY + 1 * scale + offsetY;
+        ctx.fillStyle = '#facc15';
+        // basit bir piksel yıldız şekli
+        ctx.fillRect(sx, sy, 2 * scale, 2 * scale);
+        ctx.fillRect(sx - scale, sy + scale, scale, scale);
+        ctx.fillRect(sx + 2 * scale, sy + scale, scale, scale);
+      }
       }
     };
 
@@ -1148,14 +1158,15 @@ const MainGameScreen = ({
   hasNotifyPermission,
   onOpenQuests,
 }: any) => {
-  type MiniGameType =
+    type MiniGameType =
     | 'NONE'
     | 'CATCH_APPLE'
     | 'CATCH_STAR'
     | 'TAP_DRACO'
     | 'RPS'
-    | 'MATH';
-
+    | 'MATH'
+    | 'FLAME_SHOW';   // 🔥 Draco’s Flame Show
+  
   const { dragon, weather } = gameState;
 
   const [showInventory, setShowInventory] = useState(false);
@@ -1227,7 +1238,7 @@ const MainGameScreen = ({
     }
   };
 
-  const handleItemSelect = (item: Item) => {
+    const handleItemSelect = (item: Item) => {
     setShowInventory(false);
     if (item.type === 'FOOD') {
       onAction({ type: 'USE_ITEM', item });
@@ -1241,6 +1252,10 @@ const MainGameScreen = ({
           text: 'TOPU FIRLATMAK IÇIN TIKLA',
           color: '#ef4444',
         });
+      } else if (item.id === 'flame_show') {
+        // 🎪 Draco's Flame Show mini oyununu başlat
+        onAction({ type: 'USE_ITEM', item });      // ödüller / enerji tüketimi
+        startMiniGame('FLAME_SHOW');               // ekran içi mini oyun
       } else {
         onAction({ type: 'USE_ITEM', item });
         setActionAnimation('playing');
@@ -1249,7 +1264,7 @@ const MainGameScreen = ({
       onAction({ type: 'EQUIP', item });
     }
   };
-
+  
   const startMiniGame = (type: MiniGameType) => {
     if (type === 'NONE') return;
 
@@ -1336,7 +1351,25 @@ const MainGameScreen = ({
         options,
       });
       setGameLabel('MATEMATİK');
-    }
+    } else if (type === 'FLAME_SHOW') {
+      const totalTime = 6;
+      setGameLabel("Draco's Flame Show");
+      setGameTime(totalTime);
+
+      miniGameInterval.current = window.setInterval(() => {
+        setGameTime((t) => {
+          if (t <= 1) {
+            if (miniGameInterval.current)
+              window.clearInterval(miniGameInterval.current);
+
+            // Bu oyunda skor yok, gösteri izlenince direkt kazan
+            onMiniGameComplete('WIN', 'FLAME_SHOW');
+            setActiveMiniGame('NONE');
+            return 0;
+          }
+          return t - 1;
+        });
+      }, 1000);
   };
 
   const handleCatchClick = (e: React.MouseEvent) => {
@@ -1408,7 +1441,7 @@ const MainGameScreen = ({
     setActiveMiniGame('NONE');
   };
 
-  let overrideMode: string | null =
+    let overrideMode: string | null =
     actionAnimation || (fetchMode && ballPos.x > -1 ? 'fetch' : null);
 
   if (activeMiniGame === 'TAP_DRACO' && tapHighlight) {
@@ -1417,7 +1450,10 @@ const MainGameScreen = ({
   if (activeMiniGame === 'RPS' || activeMiniGame === 'MATH') {
     overrideMode = 'idle';
   }
-
+  if (activeMiniGame === 'FLAME_SHOW') {
+    // Draco ateş çemberinden geçerken uçuyormuş gibi görünsün
+    overrideMode = 'fly';
+  }
   return (
     <LcdScreen
       className="flex flex-col relative"
@@ -1546,6 +1582,15 @@ const MainGameScreen = ({
                 >
                   ➕ MATEMATİK SORUSU
                 </button>
+               <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    startMiniGame('FLAME_SHOW');
+                  }}
+                  className="border-2 border-lcd-fg py-1 hover:bg-black/10"
+                >
+                  🔥 Draco's Flame Show
+                </button>
               </div>
               <button
                 onClick={(e) => {
@@ -1657,6 +1702,19 @@ const MainGameScreen = ({
                     ))}
                   </div>
                 </div>
+              )}
+            {activeMiniGame === 'FLAME_SHOW' && (
+              <>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-24 h-24 flex items-center justify-center animate-bounce">
+                    <ProceduralIcon type="CIRCUS_RING" size={64} />
+                  </div>
+                </div>
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] px-3 py-1 rounded border-2 border-[#facc15] bg-black/70 text-[#facc15] pointer-events-none font-pixel">
+                  Draco's Flame Show!
+                </div>
+              </>
+            )}
               </div>
             )}
           </div>
