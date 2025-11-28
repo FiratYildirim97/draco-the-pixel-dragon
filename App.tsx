@@ -399,7 +399,6 @@ const ProceduralDragon = ({
         ctx.fillRect(sx - scale, sy + scale, scale, scale);
         ctx.fillRect(sx + 2 * scale, sy + scale, scale, scale);
       }
-      }
     };
 
     const drawDragonBody = (t: number) => {
