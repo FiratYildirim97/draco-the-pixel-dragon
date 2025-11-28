@@ -894,11 +894,9 @@ const StartScreen = ({ onStart, onContinue, hasSave }: any) => (
   <div className="flex flex-col items-center justify-center h-full space-y-8 bg-pixel-dark text-white p-6 relative overflow-hidden">
     <div className="absolute inset-0 opacity-30 bg-[#7f1d1d] mix-blend-multiply" />
     <div className="relative z-10 text-center space-y-2 bg-pixel-dark/90 p-6 border-4 border-white shadow-pixel backdrop-blur-sm">
-      <h1 className="text-2xl sm:text-4xl leading-tight text-shadow-pixel tracking-tighter text-[#ef4444]">
-        DRACO
-        <br />
-        THE PIXEL DRAGON
-      </h1>
+     <h1 className="font-pixel text-2xl sm:text-4xl leading-tight text-shadow-pixel tracking-tighter text-[#ef4444]">
+  Draco the<br/>Pixel Dragon
+</h1>
     </div>
     <div className="relative z-10 flex flex-col w-full max-w-xs gap-4">
       <PixelButton onClick={onStart} className="w-full" variant="primary">
