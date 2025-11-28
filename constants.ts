@@ -51,7 +51,7 @@ export const ITEMS: Item[] = [
     effect: { hunger: 10, happiness: 25, energy: 20, health: 20 },
   },
 
-  // --- OYUNCAKLAR (TOY) ---
+    // --- OYUNCAKLAR (TOY) ---
   {
     id: 'ball',
     name: 'Kırmızı Top',
@@ -68,7 +68,14 @@ export const ITEMS: Item[] = [
     image: 'PLUSH',
     effect: { happiness: 20, energy: -3 },
   },
-
+  {
+    id: 'flame_show',
+    name: "Draco's Flame Show",
+    type: 'TOY',
+    price: 55,
+    image: 'CIRCUS_RING',   // Bunu birazdan PIXEL_ART'a ekliyoruz
+    effect: { happiness: 25, energy: -5 },
+  },
   // --- AKSESUARLAR (ACCESSORY) ---
   {
     id: 'hat',
