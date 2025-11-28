@@ -1,14 +1,7 @@
 // src/App.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  GameState,
-  Screen,
-  DragonStage,
-  Item,
-  WeatherType,
-  DailyQuest,
-} from './types';
+import { GameState, Screen, DragonStage, Item, WeatherType } from './types';
 import { ITEMS, INITIAL_GAME_STATE } from './constants';
 
 // --- Types for Visual Effects ---
@@ -19,6 +12,9 @@ interface FloatingText {
   y: number;
   color: string;
 }
+
+// --- Mini game type ---
+type MiniGameType = 'NONE' | 'RPS' | 'MATH' | 'CATCH' | 'TAP' | 'FLAME_SHOW';
 
 // --- Pixel Art Data (8x8 or 10x10 grids) ---
 const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
@@ -33,7 +29,7 @@ const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
       [0, 0, 1, 2, 2, 2, 1, 0],
       [0, 0, 0, 1, 1, 1, 0, 0],
     ],
-    palette: ['transparent', '#b91c1c', '#fecaca', '#f87171'],
+    palette: ['transparent', '#b91c1c', '#fecaca', '#f87171'], // Kırmızı yumurta
   },
   APPLE: {
     grid: [
@@ -152,33 +148,7 @@ const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
     ],
     palette: ['transparent', '#eab308', '#a16207', '#ec4899'],
   },
-   STAR: {
-    grid: [
-      [0, 0, 0, 1, 0, 0, 0, 0],
-      [0, 0, 1, 1, 1, 0, 0, 0],
-      [0, 1, 1, 1, 1, 1, 0, 0],
-      [0, 0, 0, 1, 0, 0, 0, 0],
-      [0, 0, 1, 1, 1, 0, 0, 0],
-      [0, 1, 1, 1, 1, 1, 0, 0],
-      [0, 1, 0, 1, 0, 1, 0, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0],
-    ],
-    palette: ['transparent', '#facc15'],
-  },
-  CIRCUS_RING: {
-    grid: [
-      [0, 0, 0, 2, 2, 0, 0, 0],
-      [0, 0, 2, 1, 1, 2, 0, 0],
-      [0, 2, 1, 0, 0, 1, 2, 0],
-      [0, 2, 1, 0, 0, 1, 2, 0],
-      [0, 2, 1, 0, 0, 1, 2, 0],
-      [0, 0, 2, 1, 1, 2, 0, 0],
-      [0, 0, 0, 3, 3, 0, 0, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0],
-    ],
-    // 1: sarı halka, 2: kırmızı ateş, 3: turuncu dip alev
-    palette: ['transparent', '#facc15', '#ef4444', '#f97316'],
-  },};
+};
 
 const ProceduralIcon = ({
   type,
@@ -213,7 +183,12 @@ const ProceduralIcon = ({
         const colorIndex = grid[y][x];
         if (colorIndex !== 0) {
           ctx.fillStyle = palette[colorIndex];
-          ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+          ctx.fillRect(
+            x * pixelSize,
+            y * pixelSize,
+            pixelSize,
+            pixelSize,
+          );
         }
       }
     }
@@ -258,7 +233,10 @@ function getDragonColors(
   const isAngry = mode === 'angry';
   const isSleepy = mode === 'sleepy';
   const isExcited =
-    mode === 'excited' || mode === 'play' || mode === 'playing' || mode === 'fetch';
+    mode === 'excited' ||
+    mode === 'play' ||
+    mode === 'playing' ||
+    mode === 'fetch';
   const isHappy = mode === 'happy' || mode === 'feeding';
   const isRainbow = mode === 'rainbow';
 
@@ -340,8 +318,6 @@ const ProceduralDragon = ({
 
     const headLogicalX = 8 * scale;
     const headLogicalY = 5 * scale;
-    const bodyCenterLogicalX = 8 * scale;
-    const bodyCenterLogicalY = 11 * scale;
 
     const drawRect = (x: number, y: number, color: string) => {
       ctx.fillStyle = color;
@@ -361,43 +337,42 @@ const ProceduralDragon = ({
           ctx.fillStyle = hatColor;
           ctx.fillRect(cx, hy + i * scale, w, scale);
         }
+
         ctx.fillStyle = hatColor;
-        ctx.fillRect(headLogicalX - 5 * scale, hy + 5 * scale, 10 * scale, scale);
+        ctx.fillRect(
+          headLogicalX - 5 * scale,
+          hy + 5 * scale,
+          10 * scale,
+          scale,
+        );
+
         ctx.fillStyle = hatBand;
-        ctx.fillRect(headLogicalX - 3 * scale, hy + 4 * scale, 6 * scale, scale);
+        ctx.fillRect(
+          headLogicalX - 3 * scale,
+          hy + 4 * scale,
+          6 * scale,
+          scale,
+        );
       } else if (type === 'glasses') {
         const gx = headLogicalX - 4 * scale;
         const gy = headLogicalY + 1 * scale + offsetY;
         ctx.fillStyle = '#000000';
         ctx.fillRect(gx, gy, 3 * scale, 2 * scale);
         ctx.fillRect(gx + 5 * scale, gy, 3 * scale, 2 * scale);
-        ctx.fillRect(gx + 3 * scale, gy + 0.5 * scale, 2 * scale, 0.5 * scale);
+        ctx.fillRect(
+          gx + 3 * scale,
+          gy + 0.5 * scale,
+          2 * scale,
+          0.5 * scale,
+        );
         ctx.fillStyle = '#60a5fa';
         ctx.fillRect(gx + scale, gy + 0.5 * scale, scale, scale);
-        ctx.fillRect(gx + 6 * scale, gy + 0.5 * scale, scale, scale);
-      } else if (type === 'crown') {
-        const cy = headLogicalY - 3 * scale + offsetY;
-        const cx = headLogicalX - 4 * scale;
-        ctx.fillStyle = '#facc15';
-        ctx.fillRect(cx, cy + 2 * scale, 8 * scale, scale);
-        ctx.fillRect(cx + 1 * scale, cy, scale, 2 * scale);
-        ctx.fillRect(cx + 3 * scale, cy - scale, scale, 3 * scale);
-        ctx.fillRect(cx + 5 * scale, cy, scale, 2 * scale);
-      } else if (type === 'scarf') {
-        const sy = headLogicalY + 4 * scale + offsetY;
-        const sx = headLogicalX - 4 * scale;
-        ctx.fillStyle = '#b91c1c';
-        ctx.fillRect(sx, sy, 8 * scale, 2 * scale);
-        ctx.fillRect(sx + 2 * scale, sy + 2 * scale, 2 * scale, 3 * scale);
-        } else if (type === 'star_charm') {
-        // Yıldız tılsımı: Draco'nun sağ tarafında küçük piksel yıldız
-        const sx = headLogicalX + 4 * scale;
-        const sy = headLogicalY + 1 * scale + offsetY;
-        ctx.fillStyle = '#facc15';
-        // basit bir piksel yıldız şekli
-        ctx.fillRect(sx, sy, 2 * scale, 2 * scale);
-        ctx.fillRect(sx - scale, sy + scale, scale, scale);
-        ctx.fillRect(sx + 2 * scale, sy + scale, scale, scale);
+        ctx.fillRect(
+          gx + 6 * scale,
+          gy + 0.5 * scale,
+          scale,
+          scale,
+        );
       }
     };
 
@@ -445,93 +420,16 @@ const ProceduralDragon = ({
       }
     };
 
-    const drawWingPattern = (
-      baseX: number,
-      baseY: number,
-      direction: number,
-      amplitude: number,
-      t: number,
-    ) => {
-      let wingColor = mode === 'angry' ? '#7f1d1d' : '#b91c1c';
-      if (stage === 'baby') wingColor = '#fca5a5';
-      if (stage === 'old') wingColor = '#450a0a';
-      if (mode === 'rainbow') wingColor = `hsl(${(t * 100) % 360}, 70%, 50%)`;
-
-      let flapSpeed =
-        mode === 'flap' ||
-        mode === 'excited' ||
-        mode === 'play' ||
-        mode === 'playing' ||
-        mode === 'fly' ||
-        mode === 'fetch'
-          ? 15
-          : 3;
-      if (stage === 'baby') flapSpeed *= 1.2;
-      if (stage === 'old') flapSpeed *= 0.6;
-      if (mode === 'fly' || mode === 'fetch') flapSpeed = 20;
-
-      const flap = Math.sin(t * flapSpeed) * amplitude;
-      const logicalY = baseY + flap;
-
-      ctx.fillStyle = wingColor;
-      for (let wy = 0; wy < 6; wy++) {
-        const width = 6 - wy;
-        for (let wx = 0; wx < width; wx++) {
-          const lx = baseX + direction * wx;
-          const ly = logicalY - wy;
-          drawRect(lx, ly, wingColor);
-        }
-      }
-    };
-
-    const drawWings = (t: number) => {
-      if (mode === 'sleepy' && stage !== 'baby') return;
-      const shoulderY = headLogicalY + 3 * scale;
-      const centerX = bodyCenterLogicalX;
-
-      let amplitude =
-        mode === 'flap' ||
-        mode === 'excited' ||
-        mode === 'play' ||
-        mode === 'playing' ||
-        mode === 'fly' ||
-        mode === 'fetch'
-          ? 4
-          : 2;
-      if (stage === 'baby') amplitude += 1;
-      if (stage === 'old') amplitude -= 0.5;
-      if (amplitude < 1.5) amplitude = 1.5;
-
-      drawWingPattern(centerX + 2.5 * scale, shoulderY, 1, amplitude, t);
-      drawWingPattern(centerX - 2.5 * scale, shoulderY, -1, amplitude, t);
-    };
-
-    const drawFood = (t: number) => {
-      const offset = Math.sin(t * 15) * 2;
-      const lx = headLogicalX - 4;
-      const ly = headLogicalY + 8 + offset;
-      ctx.fillStyle = '#16a34a';
-      ctx.fillRect(lx, ly, 6, 6);
-      ctx.fillStyle = '#ecfccb';
-      ctx.fillRect(lx + 2, ly + 1, 2, 2);
-    };
-
     const render = (timestamp: number) => {
       if (!animate) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawDragonBody(0);
-        drawWings(0);
         return;
       }
 
       const t = timestamp / 1000;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawDragonBody(t);
-      drawWings(t);
-
-      if (mode === 'feeding') {
-        drawFood(t);
-      }
 
       frameRef.current = requestAnimationFrame(render);
     };
@@ -563,9 +461,10 @@ const PixelButton = ({
     'relative font-pixel text-xs sm:text-sm uppercase py-3 px-4 transition-transform active:translate-y-1 disabled:opacity-50 disabled:active:translate-y-0 select-none';
   let colorStyles =
     'bg-gray-200 border-4 border-gray-800 text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-100';
-  if (variant === 'primary')
+  if (variant === 'primary') {
     colorStyles =
       'bg-[#ef4444] border-4 border-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:brightness-110';
+  }
   return (
     <button
       onClick={onClick}
@@ -577,63 +476,76 @@ const PixelButton = ({
   );
 };
 
-const LcdScreen = ({ children, className = '', isNight = false, onClick }: any) => (
-  <div
-    className="w-full h-full bg-lcd-bg text-lcd-fg overflow-hidden relative font-pixel shadow-screen-inner transition-colors duration-1000"
-    onClick={onClick}
-  >
+const LcdScreen = ({
+  children,
+  className = '',
+  isNight = false,
+  onClick,
+}: any) => {
+  return (
     <div
-      className="absolute inset-0 pointer-events-none opacity-20 z-10 mix-blend-multiply"
-      style={{
-        backgroundImage:
-          'linear-gradient(rgba(0,0,0, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0, 0.5) 1px, transparent 1px)',
-        backgroundSize: '6px 6px',
-      }}
-    />
-    <div
-      className={`absolute inset-0 bg-[#0f172a] mix-blend-multiply pointer-events-none z-20 transition-opacity duration-1000 ${
-        isNight ? 'opacity-90' : 'opacity-0'
-      }`}
-    />
-    <div className={`relative z-0 h-full p-4 ${className}`}>{children}</div>
-  </div>
-);
-
-const FloatingTextOverlay = ({ items }: { items: FloatingText[] }) => (
-  <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
-    {items.map((item) => (
+      className="w-full h-full bg-lcd-bg text-lcd-fg overflow-hidden relative font-pixel shadow-screen-inner transition-colors duration-1000"
+      onClick={onClick}
+    >
       <div
-        key={item.id}
-        className="absolute text-xs font-bold animate-bounce-pixel whitespace-nowrap"
+        className="absolute inset-0 pointer-events-none opacity-20 z-10 mix-blend-multiply"
         style={{
-          left: `${item.x}%`,
-          top: `${item.y}%`,
-          color: item.color,
-          textShadow: '2px 2px 0px #000',
+          backgroundImage:
+            'linear-gradient(rgba(0,0,0, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0, 0.5) 1px, transparent 1px)',
+          backgroundSize: '6px 6px',
         }}
-      >
-        {item.text}
+      />
+      <div
+        className={`absolute inset-0 bg-[#0f172a] mix-blend-multiply pointer-events-none z-20 transition-opacity duration-1000 ${
+          isNight ? 'opacity-90' : 'opacity-0'
+        }`}
+      />
+      <div className={`relative z-0 h-full p-4 ${className}`}>
+        {children}
       </div>
-    ))}
-  </div>
-);
+    </div>
+  );
+};
 
-const Clouds = () => (
-  <div className="absolute inset-0 z-0 pointer-events-none opacity-50 overflow-hidden">
-    <div
-      className="absolute top-[10%] left-[-20%] animate-[shiver_20s_linear_infinite] w-20 h-10 bg-white/40 rounded-full blur-sm"
-      style={{ animationDuration: '30s' }}
-    />
-    <div
-      className="absolute top-[30%] left-[-20%] animate-[shiver_25s_linear_infinite] w-32 h-12 bg-white/30 rounded-full blur-md"
-      style={{ animationDuration: '45s', animationDelay: '2s' }}
-    />
-    <div
-      className="absolute top-[5%] left-[-20%] animate-[shiver_35s_linear_infinite] w-16 h-8 bg-white/50 rounded-full blur-sm"
-      style={{ animationDuration: '60s', animationDelay: '10s' }}
-    />
-  </div>
-);
+const FloatingTextOverlay = ({ items }: { items: FloatingText[] }) => {
+  return (
+    <div className="absolute inset-0 pointer-events-none z-50 overflow-hidden">
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className="absolute text-xs font-bold animate-bounce-pixel whitespace-nowrap"
+          style={{
+            left: `${item.x}%`,
+            top: `${item.y}%`,
+            color: item.color,
+            textShadow: '2px 2px 0px #000',
+          }}
+        >
+          {item.text}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const Clouds = () => {
+  return (
+    <div className="absolute inset-0 z-0 pointer-events-none opacity-50 overflow-hidden">
+      <div
+        className="absolute top-[10%] left-[-20%] animate-[shiver_20s_linear_infinite] w-20 h-10 bg-white/40 rounded-full blur-sm"
+        style={{ animationDuration: '30s' }}
+      />
+      <div
+        className="absolute top-[30%] left-[-20%] animate-[shiver_25s_linear_infinite] w-32 h-12 bg-white/30 rounded-full blur-md"
+        style={{ animationDuration: '45s', animationDelay: '2s' }}
+      />
+      <div
+        className="absolute top-[5%] left-[-20%] animate-[shiver_35s_linear_infinite] w-16 h-8 bg-white/50 rounded-full blur-sm"
+        style={{ animationDuration: '60s', animationDelay: '10s' }}
+      />
+    </div>
+  );
+};
 
 const WeatherOverlay = ({ weather }: { weather: WeatherType }) => {
   if (weather === 'SUNNY') return null;
@@ -652,6 +564,376 @@ const WeatherOverlay = ({ weather }: { weather: WeatherType }) => {
   );
 };
 
+// --- Mini Games Modal (5 oyun) ---
+
+const MiniGameModal = ({
+  onClose,
+  onComplete,
+}: {
+  onClose: () => void;
+  onComplete: (result: 'WIN' | 'LOSE' | 'DRAW', game: MiniGameType) => void;
+}) => {
+  const [selectedGame, setSelectedGame] =
+    useState<MiniGameType>('NONE');
+  const [step, setStep] = useState<'CHOICE' | 'THINKING' | 'RESULT'>(
+    'CHOICE',
+  );
+  const [result, setResult] = useState<string | null>(null);
+
+  // Math game
+  const [mathQ] = useState({
+    text: '2 + 3 = ?',
+    ans: 5,
+    options: [4, 5, 6, 3],
+  });
+
+  // Catch game
+  const [catchScore, setCatchScore] = useState(0);
+  const [catchTarget, setCatchTarget] = useState({ top: 50, left: 50 });
+  const [catchTime, setCatchTime] = useState(10);
+  const catchInterval = useRef<number | null>(null);
+
+  // Tap game
+  const [tapCount, setTapCount] = useState(0);
+  const [tapTime, setTapTime] = useState(8);
+  const tapInterval = useRef<number | null>(null);
+
+  // RPS
+  const handleRPS = (choice: 'ROCK' | 'PAPER' | 'SCISSORS') => {
+    setStep('THINKING');
+    setTimeout(() => {
+      const opts: ('ROCK' | 'PAPER' | 'SCISSORS')[] = [
+        'ROCK',
+        'PAPER',
+        'SCISSORS',
+      ];
+      const cpu = opts[Math.floor(Math.random() * 3)];
+      let res: 'WIN' | 'LOSE' | 'DRAW' = 'DRAW';
+      if (choice !== cpu) {
+        if (
+          (choice === 'ROCK' && cpu === 'SCISSORS') ||
+          (choice === 'PAPER' && cpu === 'ROCK') ||
+          (choice === 'SCISSORS' && cpu === 'PAPER')
+        ) {
+          res = 'WIN';
+        } else {
+          res = 'LOSE';
+        }
+      }
+      setResult(res);
+      setStep('RESULT');
+      setTimeout(() => {
+        onComplete(res, 'RPS');
+      }, 1200);
+    }, 1000);
+  };
+
+  const handleMath = (val: number) => {
+    const res: 'WIN' | 'LOSE' =
+      val === mathQ.ans ? 'WIN' : 'LOSE';
+    setResult(res);
+    setStep('RESULT');
+    setTimeout(() => {
+      onComplete(res, 'MATH');
+    }, 800);
+  };
+
+  useEffect(() => {
+    if (selectedGame === 'CATCH') {
+      setCatchScore(0);
+      setCatchTime(10);
+      setCatchTarget({ top: 50, left: 50 });
+      if (catchInterval.current) {
+        clearInterval(catchInterval.current);
+      }
+      catchInterval.current = window.setInterval(() => {
+        setCatchTime((t) => {
+          if (t <= 1) {
+            if (catchInterval.current) {
+              clearInterval(catchInterval.current);
+            }
+            const res: 'WIN' | 'LOSE' =
+              catchScore >= 5 ? 'WIN' : 'LOSE';
+            onComplete(res, 'CATCH');
+            return 0;
+          }
+          return t - 1;
+        });
+        setCatchTarget({
+          top: 10 + Math.random() * 80,
+          left: 10 + Math.random() * 80,
+        });
+      }, 800);
+    }
+    return () => {
+      if (catchInterval.current) {
+        clearInterval(catchInterval.current);
+      }
+    };
+  }, [selectedGame, catchScore, onComplete]);
+
+  const handleCatchClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCatchScore((s) => s + 1);
+  };
+
+  useEffect(() => {
+    if (selectedGame === 'TAP') {
+      setTapCount(0);
+      setTapTime(8);
+      if (tapInterval.current) {
+        clearInterval(tapInterval.current);
+      }
+      tapInterval.current = window.setInterval(() => {
+        setTapTime((t) => {
+          if (t <= 1) {
+            if (tapInterval.current) {
+              clearInterval(tapInterval.current);
+            }
+            const res: 'WIN' | 'LOSE' =
+              tapCount >= 15 ? 'WIN' : 'LOSE';
+            onComplete(res, 'TAP');
+            return 0;
+          }
+          return t - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (tapInterval.current) {
+        clearInterval(tapInterval.current);
+      }
+    };
+  }, [selectedGame, tapCount, onComplete]);
+
+  const handleTap = () => {
+    setTapCount((c) => c + 1);
+  };
+
+  const startFlameShow = () => {
+    setStep('THINKING');
+    setResult(null);
+    setTimeout(() => {
+      setResult('WIN');
+      setStep('RESULT');
+      setTimeout(() => {
+        onComplete('WIN', 'FLAME_SHOW');
+      }, 1200);
+    }, 1500);
+  };
+
+  return (
+    <div className="absolute inset-0 z-40 bg-black/80 flex items-center justify-center p-4">
+      <div className="bg-lcd-bg border-4 border-lcd-fg p-3 w-full max-w-[300px] shadow-pixel relative">
+        <button
+          onClick={onClose}
+          className="absolute top-2 right-2 text-xs font-bold"
+        >
+          X
+        </button>
+
+        {selectedGame === 'NONE' && (
+          <div className="flex flex-col gap-2 text-center">
+            <h3 className="text-sm font-pixel mb-2 border-b-2 border-lcd-fg pb-2">
+              OYUN MERKEZİ
+            </h3>
+            <button
+              onClick={() => {
+                setSelectedGame('RPS');
+                setStep('CHOICE');
+                setResult(null);
+              }}
+              className="border-2 border-lcd-fg p-2 text-xs hover:bg-black/10"
+            >
+              TAŞ KAĞIT MAKAS
+            </button>
+            <button
+              onClick={() => {
+                setSelectedGame('MATH');
+                setStep('CHOICE');
+                setResult(null);
+              }}
+              className="border-2 border-lcd-fg p-2 text-xs hover:bg-black/10"
+            >
+              MATEMATİK DEHASI
+            </button>
+            <button
+              onClick={() => {
+                setSelectedGame('CATCH');
+                setStep('CHOICE');
+                setResult(null);
+              }}
+              className="border-2 border-lcd-fg p-2 text-xs hover:bg-black/10"
+            >
+              ELMA YAKALAMA
+            </button>
+            <button
+              onClick={() => {
+                setSelectedGame('TAP');
+                setStep('CHOICE');
+                setResult(null);
+              }}
+              className="border-2 border-lcd-fg p-2 text-xs hover:bg-black/10"
+            >
+              HIZLI TIKLAMA
+            </button>
+            <button
+              onClick={() => {
+                setSelectedGame('FLAME_SHOW');
+                setStep('CHOICE');
+                setResult(null);
+              }}
+              className="border-2 border-red-700 p-2 text-xs hover:bg-red-200/40 bg-red-100/40"
+            >
+              DRACO&apos;S FLAME SHOW 🔥
+            </button>
+          </div>
+        )}
+
+        {selectedGame === 'RPS' && (
+          <div className="text-center">
+            <h3 className="text-sm font-pixel mb-2">
+              TAŞ KAĞIT MAKAS
+            </h3>
+            {step === 'CHOICE' && (
+              <div className="flex justify-center gap-2">
+                <button
+                  onClick={() => handleRPS('ROCK')}
+                  className="border-2 border-black bg-white px-2 py-1 text-xs"
+                >
+                  TAŞ
+                </button>
+                <button
+                  onClick={() => handleRPS('PAPER')}
+                  className="border-2 border-black bg-white px-2 py-1 text-xs"
+                >
+                  KAĞIT
+                </button>
+                <button
+                  onClick={() => handleRPS('SCISSORS')}
+                  className="border-2 border-black bg-white px-2 py-1 text-xs"
+                >
+                  MAKAS
+                </button>
+              </div>
+            )}
+            {step === 'THINKING' && (
+              <div className="mt-4 text-xs">Draco düşünüyor...</div>
+            )}
+            {step === 'RESULT' && (
+              <div className="mt-4 text-lg font-bold">{result}</div>
+            )}
+          </div>
+        )}
+
+        {selectedGame === 'MATH' && (
+          <div className="text-center">
+            <h3 className="text-sm font-pixel mb-2">
+              MATEMATİK DEHASI
+            </h3>
+            <div className="mb-2 text-xs">Soru: {mathQ.text}</div>
+            <div className="grid grid-cols-2 gap-2">
+              {mathQ.options.map((o) => (
+                <button
+                  key={o}
+                  onClick={() => handleMath(o)}
+                  className="border-2 border-black bg-white px-2 py-1 text-xs"
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+            {step === 'RESULT' && (
+              <div className="mt-3 text-lg font-bold">{result}</div>
+            )}
+          </div>
+        )}
+
+        {selectedGame === 'CATCH' && (
+          <div className="text-center">
+            <h3 className="text-sm font-pixel mb-2">
+              ELMA YAKALAMA
+            </h3>
+            <div className="flex justify-between text-[10px] mb-1">
+              <span>Süre: {catchTime}</span>
+              <span>Skor: {catchScore}/5</span>
+            </div>
+            <div className="h-40 border-2 border-black relative bg-white/10 overflow-hidden">
+              <button
+                onClick={handleCatchClick}
+                className="absolute w-8 h-8 flex items-center justify-center text-xl transition-all duration-300"
+                style={{
+                  top: `${catchTarget.top}%`,
+                  left: `${catchTarget.left}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                <ProceduralIcon type="APPLE" size={28} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {selectedGame === 'TAP' && (
+          <div className="text-center">
+            <h3 className="text-sm font-pixel mb-2">
+              HIZLI TIKLAMA
+            </h3>
+            <div className="mb-1 text-[10px]">
+              {tapTime} sn içinde 15 kez tıkla!
+            </div>
+            <div className="mb-2 text-xs">
+              Tıklama: {tapCount}/15
+            </div>
+            <button
+              onClick={handleTap}
+              className="border-4 border-black bg-yellow-300 px-4 py-3 text-xs font-bold active:translate-y-1 shadow-pixel"
+            >
+              TIKLA!
+            </button>
+          </div>
+        )}
+
+        {selectedGame === 'FLAME_SHOW' && (
+          <div className="text-center">
+            <h3 className="text-sm font-pixel mb-2">
+              DRACO&apos;S FLAME SHOW 🔥
+            </h3>
+            <p className="text-[10px] mb-3">
+              Draco sahneye çıkıyor! Alev halkalarını
+              izleyip gösteriyi başlat.
+            </p>
+            {step === 'CHOICE' && (
+              <button
+                onClick={startFlameShow}
+                className="border-4 border-red-700 bg-red-500 text-white px-3 py-2 text-xs font-bold shadow-pixel active:translate-y-1"
+              >
+                ALEV GÖSTERİSİNİ BAŞLAT
+              </button>
+            )}
+            {step === 'THINKING' && (
+              <div className="mt-3 text-xs animate-pulse">
+                Draco derin nefes alıyor...
+              </div>
+            )}
+            {step === 'RESULT' && (
+              <div className="mt-3 text-xs">
+                <div className="text-lg font-bold text-red-600 mb-1">
+                  MUHTEŞEM! 🔥
+                </div>
+                <div className="text-[10px]">
+                  Draco alev halkalarıyla mini bir sahne
+                  şovu yaptı!
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // --- Inventory Modal ---
 
 const InventoryModal = ({
@@ -663,8 +945,16 @@ const InventoryModal = ({
   onSelect: (item: Item) => void;
   onClose: () => void;
 }) => {
-  const [tab, setTab] = useState<'FOOD' | 'TOY' | 'ACCESSORY'>('FOOD');
-  const filteredItems = ITEMS.filter((item) => item.type === tab);
+  const [tab, setTab] = useState<'FOOD' | 'TOY' | 'ACCESSORY'>(
+    'FOOD',
+  );
+  const filteredItems = ITEMS.filter(
+    (item) => item.type === tab,
+  );
+
+  const visibleItems = filteredItems.filter(
+    (i) => (inventory[i.id] || 0) > 0,
+  );
 
   return (
     <div className="absolute inset-0 z-40 bg-black/80 flex items-center justify-center p-4">
@@ -683,7 +973,9 @@ const InventoryModal = ({
           <button
             onClick={() => setTab('FOOD')}
             className={`text-[10px] px-2 py-1 border-2 border-black ${
-              tab === 'FOOD' ? 'bg-black text-white' : 'bg-transparent'
+              tab === 'FOOD'
+                ? 'bg-black text-white'
+                : 'bg-transparent'
             }`}
           >
             Yiyecek
@@ -691,7 +983,9 @@ const InventoryModal = ({
           <button
             onClick={() => setTab('TOY')}
             className={`text-[10px] px-2 py-1 border-2 border-black ${
-              tab === 'TOY' ? 'bg-black text-white' : 'bg-transparent'
+              tab === 'TOY'
+                ? 'bg-black text-white'
+                : 'bg-transparent'
             }`}
           >
             Oyuncak
@@ -699,36 +993,41 @@ const InventoryModal = ({
           <button
             onClick={() => setTab('ACCESSORY')}
             className={`text-[10px] px-2 py-1 border-2 border-black ${
-              tab === 'ACCESSORY' ? 'bg-black text-white' : 'bg-transparent'
+              tab === 'ACCESSORY'
+                ? 'bg-black text-white'
+                : 'bg-transparent'
             }`}
           >
-            Eşya
+            Aksesuar
           </button>
         </div>
 
         <div className="grid grid-cols-2 gap-2 overflow-y-auto flex-1 content-start">
-          {filteredItems.filter((i) => (inventory[i.id] || 0) > 0).length === 0 ? (
+          {visibleItems.length === 0 ? (
             <div className="col-span-2 text-center text-xs opacity-50 py-4">
               Boş...
             </div>
           ) : (
-            filteredItems
-              .filter((i) => (inventory[i.id] || 0) > 0)
-              .map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => onSelect(item)}
-                  className="flex flex-col items-center p-2 border-2 border-lcd-fg/50 hover:bg-black/10 active:translate-y-1 transition-all"
-                >
-                  <div className="w-8 h-8 mb-1">
-                    <ProceduralIcon type={item.image} size={32} />
-                  </div>
-                  <span className="text-[10px]">{item.name}</span>
-                  <span className="text-[10px] font-bold">
-                    x{inventory[item.id]}
-                  </span>
-                </button>
-              ))
+            visibleItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => onSelect(item)}
+                className="flex flex-col items-center p-2 border-2 border-lcd-fg/50 hover:bg-black/10 active:translate-y-1 transition-all"
+              >
+                <div className="w-8 h-8 mb-1">
+                  <ProceduralIcon
+                    type={item.image}
+                    size={32}
+                  />
+                </div>
+                <span className="text-[10px]">
+                  {item.name}
+                </span>
+                <span className="text-[10px] font-bold">
+                  x{inventory[item.id]}
+                </span>
+              </button>
+            ))
           )}
         </div>
       </div>
@@ -736,163 +1035,61 @@ const InventoryModal = ({
   );
 };
 
-// --- Level Up Modal ---
-
-type BuffChoice = 'HAPPINESS' | 'HYGIENE' | 'GOLD';
-
-const LevelUpModal = ({
-  count,
-  onSelect,
-}: {
-  count: number;
-  onSelect: (buff: BuffChoice) => void;
-}) => (
-  <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-    <div className="bg-lcd-bg border-4 border-lcd-fg p-4 max-w-xs w-full shadow-pixel text-center">
-      <h3 className="text-sm font-pixel mb-2">SEVİYE ATLADIN!</h3>
-      <p className="text-xs mb-3">
-        Pasif güç seç ({count} hak{count > 1 ? 'k' : ''}):
-      </p>
-      <div className="flex flex-col gap-2 text-[11px]">
-        <button
-          onClick={() => onSelect('HAPPINESS')}
-          className="border-2 border-lcd-fg px-2 py-1 hover:bg-black/10"
-        >
-          😊 Mutluluk daha yavaş azalsın
-        </button>
-        <button
-          onClick={() => onSelect('HYGIENE')}
-          className="border-2 border-lcd-fg px-2 py-1 hover:bg-black/10"
-        >
-          🧼 Temizlik daha yavaş azalsın
-        </button>
-        <button
-          onClick={() => onSelect('GOLD')}
-          className="border-2 border-lcd-fg px-2 py-1 hover:bg-black/10"
-        >
-          💰 Mini oyun altını +%20
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-// --- Daily Quest Modal ---
-
-const DailyQuestModal = ({
-  quests,
-  streak,
-  onClose,
-}: {
-  quests: DailyQuest[];
-  streak: number;
-  onClose: () => void;
-}) => (
-  <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-    <div className="bg-lcd-bg border-4 border-lcd-fg p-3 max-w-xs w-full shadow-pixel">
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="text-sm font-pixel">GÜNLÜK GÖREVLER</h3>
-        <button
-          onClick={onClose}
-          className="text-xs px-2 py-1 border border-lcd-fg hover:bg-black/10"
-        >
-          KAPAT
-        </button>
-      </div>
-      <div className="text-[11px] mb-2">
-        Streak: <b>{streak}</b> gün üst üste
-      </div>
-      <div className="flex flex-col gap-2 text-[11px] max-h-60 overflow-y-auto">
-        {quests.length === 0 && (
-          <div className="text-xs opacity-60 text-center py-4">
-            Bugün için görev yok.
-          </div>
-        )}
-        {quests.map((q) => (
-          <div
-            key={q.id}
-            className={`border-2 border-lcd-fg p-2 ${
-              q.completed ? 'bg-green-200/60' : 'bg-lcd-bg'
-            }`}
-          >
-            <div className="flex justify-between mb-1">
-              <span>{q.description}</span>
-              <span>
-                {q.progress}/{q.target}
-              </span>
-            </div>
-            <div className="text-[10px] opacity-70">
-              Ödül: {q.rewardGold} altın, {q.rewardXp} XP
-            </div>
-            {q.completed && (
-              <div className="text-[10px] text-green-700 mt-1 font-bold">
-                ✓ Tamamlandı
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
 // --- Character Component ---
 
 const DragonCharacter = ({
   dragon,
   onClick,
   overrideMode,
-  isMoving,
 }: {
   dragon: GameState['dragon'];
   onClick: (e: React.MouseEvent) => void;
   overrideMode?: string | null;
-  isMoving?: boolean;
 }) => {
   let visualStage: 'baby' | 'adult' | 'old' = 'baby';
-  let scale = 1;
   if (dragon.stage === DragonStage.ELDER) {
     visualStage = 'old';
-    scale = 1.0;
   } else if (
     dragon.stage === DragonStage.ADULT ||
     dragon.stage === DragonStage.TEEN
   ) {
     visualStage = 'adult';
-    scale = 1.2;
   } else {
     visualStage = 'baby';
-    scale = 0.8;
   }
+
+  let scale = 1;
+  if (visualStage === 'baby') scale = 0.9;
+  if (visualStage === 'adult') scale = 1.1;
+  if (visualStage === 'old') scale = 1.0;
 
   let mode = 'idle';
   let emote: string | null = null;
 
-  if (overrideMode) mode = overrideMode;
-  else if (isMoving) mode = 'fly';
-  else {
-    if (dragon.isSleeping) mode = 'sleepy';
-    else if (dragon.hunger < 30) {
+  if (overrideMode) {
+    mode = overrideMode;
+  } else {
+    if (dragon.isSleeping) {
+      mode = 'sleepy';
+    } else if (dragon.hunger < 30) {
       mode = 'angry';
       emote = '🍔';
     } else if (dragon.happiness < 30) {
       mode = 'angry';
       emote = '💔';
-    } else if (dragon.poops > 1) {
-      mode = 'idle';
-      emote = '🤢';
-    } else if (dragon.happiness > 80) mode = 'happy';
+    } else if (dragon.happiness > 80) {
+      mode = 'happy';
+      emote = '💖';
+    }
   }
 
   return (
     <div
-      className="w-full h-full cursor-pointer group flex items-center justify-center"
+      className="w-full h-full cursor-pointer flex items-center justify-center relative"
       onClick={onClick}
     >
       <div
-        className={`w-full h-full transition-all duration-500 origin-bottom ${
-          dragon.isSleeping ? 'opacity-50 grayscale' : 'active:scale-95'
-        }`}
+        className="w-full h-full transition-all duration-500 origin-bottom active:scale-95"
         style={{ transform: `scale(${scale})` }}
       >
         <ProceduralDragon
@@ -912,31 +1109,57 @@ const DragonCharacter = ({
 
 // --- Screens ---
 
-const StartScreen = ({ onStart, onContinue, hasSave }: any) => (
-  <div className="flex flex-col items-center justify-center h-full space-y-8 bg-pixel-dark text-white p-6 relative overflow-hidden">
-    <div className="absolute inset-0 opacity-30 bg-[#7f1d1d] mix-blend-multiply" />
-    <div className="relative z-10 text-center space-y-2 bg-pixel-dark/90 p-6 border-4 border-white shadow-pixel backdrop-blur-sm">
-     <h1 className="font-pixel text-2xl sm:text-4xl leading-tight text-shadow-pixel tracking-tighter text-[#ef4444]">
-  Draco the<br/>Pixel Dragon
-</h1>
+const StartScreen = ({
+  onStart,
+  onContinue,
+  hasSave,
+}: {
+  onStart: () => void;
+  onContinue: () => void;
+  hasSave: boolean;
+}) => {
+  return (
+    <div className="flex flex-col items-center justify-center h-full space-y-8 bg-pixel-dark text-white p-6 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-30 bg-[#7f1d1d] mix-blend-multiply" />
+      <div className="relative z-10 text-center space-y-2 bg-pixel-dark/90 p-6 border-4 border-white shadow-pixel backdrop-blur-sm">
+        <h1 className="text-2xl sm:text-4xl leading-tight text-shadow-pixel tracking-tighter text-[#ef4444]">
+          DRACO THE
+          <br />
+          PIXEL DRAGON
+        </h1>
+      </div>
+      <div className="relative z-10 flex flex-col w-full max-w-xs gap-4">
+        <PixelButton
+          onClick={onStart}
+          className="w-full"
+          variant="primary"
+        >
+          YENİ OYUN
+        </PixelButton>
+        <PixelButton
+          onClick={onContinue}
+          disabled={!hasSave}
+          className="w-full"
+        >
+          DEVAM ET
+        </PixelButton>
+      </div>
     </div>
-    <div className="relative z-10 flex flex-col w-full max-w-xs gap-4">
-      <PixelButton onClick={onStart} className="w-full" variant="primary">
-        YENİ OYUN
-      </PixelButton>
-      <PixelButton onClick={onContinue} disabled={!hasSave} className="w-full">
-        DEVAM ET
-      </PixelButton>
-    </div>
-  </div>
-);
+  );
+};
 
-const HatchingScreen = ({ gameState, onHatchTick }: any) => {
+const HatchingScreen = ({
+  onHatchTick,
+}: {
+  onHatchTick: () => void;
+}) => {
   const [cracks, setCracks] = useState(0);
+
   const handleClick = () => {
     setCracks((prev) => prev + 1);
     onHatchTick();
   };
+
   return (
     <LcdScreen className="flex flex-col items-center justify-between py-8">
       <div className="text-center space-y-2">
@@ -946,7 +1169,11 @@ const HatchingScreen = ({ gameState, onHatchTick }: any) => {
         className="relative w-48 h-48 flex items-center justify-center cursor-pointer active:scale-95 transition-transform animate-wobble"
         onClick={handleClick}
       >
-        <div className={`transform scale-[4] ${cracks > 0 ? 'animate-shiver' : ''}`}>
+        <div
+          className={`transform scale-[4] ${
+            cracks > 0 ? 'animate-shiver' : ''
+          }`}
+        >
           <ProceduralIcon type="EGG" size={48} />
         </div>
         <div className="absolute -bottom-8 left-0 w-full text-center text-xs animate-pulse font-bold mt-4">
@@ -957,30 +1184,319 @@ const HatchingScreen = ({ gameState, onHatchTick }: any) => {
   );
 };
 
-const StatBar = ({ icon, value, reverse = false }: any) => (
-  <div
-    className={`flex items-center gap-1 w-full max-w-[120px] ${
-      reverse ? 'flex-row-reverse' : 'flex-row'
-    }`}
-  >
-    <span className="material-symbols-outlined text-lg">{icon}</span>
-    <div className="flex-1 h-4 border-2 border-lcd-fg p-[1px]">
-      <div
-        className="h-full bg-lcd-fg"
-        style={{
-          width: `${Math.min(100, value)}%`,
-          backgroundImage:
-            'linear-gradient(90deg, transparent 50%, rgba(255,255,255,0.2) 50%)',
-          backgroundSize: '4px 100%',
-        }}
-      />
+const StatBar = ({
+  icon,
+  value,
+  reverse = false,
+}: {
+  icon: string;
+  value: number;
+  reverse?: boolean;
+}) => {
+  return (
+    <div
+      className={`flex items-center gap-1 w-full max-w-[120px] ${
+        reverse ? 'flex-row-reverse' : 'flex-row'
+      }`}
+    >
+      <span className="material-symbols-outlined text-lg">
+        {icon}
+      </span>
+      <div className="flex-1 h-4 border-2 border-lcd-fg p-[1px]">
+        <div
+          className="h-full bg-lcd-fg"
+          style={{
+            width: `${Math.min(100, value)}%`,
+            backgroundImage:
+              'linear-gradient(90deg, transparent 50%, rgba(255,255,255,0.2) 50%)',
+            backgroundSize: '4px 100%',
+          }}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
-const MarketScreen = ({ gameState, onBuy, onNavigate }: any) => {
-  const [tab, setTab] = useState<'FOOD' | 'TOY' | 'ACCESSORY'>('FOOD');
-  const filteredItems = ITEMS.filter((item) => item.type === tab);
+const MainGameScreen = ({
+  gameState,
+  onAction,
+  onNavigate,
+  onPet,
+  notifications,
+  onMiniGameComplete,
+  onRequestNotify,
+  hasNotifyPermission,
+}: {
+  gameState: GameState;
+  onAction: (action: any) => void;
+  onNavigate: (s: Screen) => void;
+  onPet: () => void;
+  notifications: FloatingText[];
+  onMiniGameComplete: (
+    result: 'WIN' | 'LOSE' | 'DRAW',
+    game: MiniGameType,
+  ) => void;
+  onRequestNotify: () => void;
+  hasNotifyPermission: boolean;
+}) => {
+  const { dragon, weather } = gameState;
+  const [showInventory, setShowInventory] = useState(false);
+  const [showMiniGame, setShowMiniGame] = useState(false);
+  const [position, setPosition] = useState({ x: 50, y: 50 });
+  const [actionAnimation, setActionAnimation] = useState<
+    string | null
+  >(null);
+
+  useEffect(() => {
+    if (actionAnimation) {
+      const timer = setTimeout(
+        () => setActionAnimation(null),
+        2000,
+      );
+      return () => clearTimeout(timer);
+    }
+  }, [actionAnimation]);
+
+  const handleScreenClick = (e: React.MouseEvent) => {
+    if (dragon.isSleeping) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const clampedX = Math.max(15, Math.min(85, x));
+    const clampedY = Math.max(30, Math.min(75, y));
+    setPosition({ x: clampedX, y: clampedY });
+  };
+
+  const handleItemSelect = (item: Item) => {
+    setShowInventory(false);
+    if (item.type === 'FOOD') {
+      onAction({ type: 'USE_ITEM', item });
+      if (item.id.includes('potion')) {
+        setActionAnimation('rainbow');
+      } else {
+        setActionAnimation('feeding');
+      }
+    } else if (item.type === 'TOY') {
+      onAction({ type: 'USE_ITEM', item });
+      setActionAnimation('playing');
+    } else if (item.type === 'ACCESSORY') {
+      onAction({ type: 'EQUIP', item });
+    }
+  };
+
+  return (
+    <LcdScreen
+      className="flex flex-col relative"
+      isNight={dragon.isSleeping}
+      onClick={handleScreenClick}
+    >
+      <Clouds />
+      <WeatherOverlay weather={weather} />
+      <FloatingTextOverlay items={notifications} />
+
+      {/* HUD */}
+      <div className="flex justify-between items-start mb-4 relative z-30 pointer-events-none">
+        <div className="flex flex-col gap-2 w-1/2">
+          <StatBar icon="nutrition" value={dragon.hunger} />
+          <StatBar icon="favorite" value={dragon.happiness} />
+        </div>
+        <div className="flex flex-col gap-2 w-1/2 items-end">
+          <StatBar
+            icon="cleaning_services"
+            value={dragon.hygiene}
+            reverse
+          />
+          <StatBar
+            icon="bolt"
+            value={dragon.energy}
+            reverse
+          />
+        </div>
+      </div>
+
+      {/* Viewport */}
+      <div className="flex-1 relative z-0 overflow-hidden">
+        <div
+          className="absolute w-48 h-48 transition-all duration-700 ease-in-out"
+          style={{
+            left: `${position.x}%`,
+            top: `${position.y}%`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <DragonCharacter
+            dragon={dragon}
+            onClick={(e) => {
+              e.stopPropagation();
+              onPet();
+            }}
+            overrideMode={actionAnimation}
+          />
+        </div>
+
+        {Array.from({ length: dragon.poops }).map((_, i) => (
+          <span
+            key={i}
+            className="absolute bottom-4 text-2xl font-pixel animate-bounce z-20"
+            style={{ right: `${20 + i * 24}px` }}
+          >
+            💩
+          </span>
+        ))}
+
+        {dragon.isSleeping && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-xs animate-pulse bg-black/50 px-2 py-1">
+            Uyuyor...
+          </div>
+        )}
+      </div>
+
+      {/* Üst küçük butonlar */}
+      <div className="flex justify-between items-center mt-1 px-1 relative z-30 pointer-events-auto mb-1">
+        <div className="flex gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onNavigate(Screen.STATS);
+            }}
+            disabled={dragon.isSleeping}
+            className="hover:bg-black/10 p-1 rounded"
+          >
+            <span className="material-symbols-outlined">
+              bar_chart
+            </span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onNavigate(Screen.MARKET);
+            }}
+            disabled={dragon.isSleeping}
+            className="hover:bg-black/10 p-1 rounded"
+          >
+            <span className="material-symbols-outlined">
+              storefront
+            </span>
+          </button>
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRequestNotify();
+          }}
+          className={`hover:bg-black/10 p-1 rounded ${
+            hasNotifyPermission
+              ? 'text-black opacity-50'
+              : 'text-red-600 animate-bounce'
+          }`}
+        >
+          <span className="material-symbols-outlined">
+            {hasNotifyPermission
+              ? 'notifications_active'
+              : 'notifications_off'}
+          </span>
+        </button>
+      </div>
+
+      {/* Alt kontrol butonları */}
+      <div className="grid grid-cols-4 gap-2 mt-1 relative z-30 pointer-events-auto">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowInventory(true);
+          }}
+          disabled={dragon.isSleeping}
+          className="flex flex-col items-center p-2 border-2 border-lcd-fg hover:bg-black/10 active:translate-y-1 bg-lcd-bg"
+        >
+          <span className="material-symbols-outlined">
+            backpack
+          </span>
+          <span className="text-[10px] mt-1 hidden sm:block">
+            ÇANTA
+          </span>
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMiniGame(true);
+          }}
+          disabled={dragon.isSleeping || dragon.energy < 10}
+          className="flex flex-col items-center p-2 border-2 border-lcd-fg hover:bg-black/10 active:translate-y-1 bg-lcd-bg disabled:opacity-50"
+        >
+          <span className="material-symbols-outlined">
+            sports_esports
+          </span>
+          <span className="text-[10px] mt-1 hidden sm:block">
+            OYUNLAR
+          </span>
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onAction({ type: 'CLEAN' });
+          }}
+          disabled={dragon.isSleeping}
+          className="flex flex-col items-center p-2 border-2 border-lcd-fg hover:bg-black/10 active:translate-y-1 bg-lcd-bg"
+        >
+          <span className="material-symbols-outlined">soap</span>
+          <span className="text-[10px] mt-1 hidden sm:block">
+            TEMİZLE
+          </span>
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onAction({ type: 'SLEEP' });
+          }}
+          className={`flex flex-col items-center p-2 border-2 border-lcd-fg hover:bg-black/10 active:translate-y-1 transition-all ${
+            dragon.isSleeping ? 'bg-black text-white' : 'bg-lcd-bg'
+          }`}
+        >
+          <span className="material-symbols-outlined">
+            bedtime
+          </span>
+          <span className="text-[10px] mt-1 hidden sm:block">
+            UYKU
+          </span>
+        </button>
+      </div>
+
+      {showInventory && (
+        <InventoryModal
+          inventory={gameState.inventory}
+          onClose={() => setShowInventory(false)}
+          onSelect={handleItemSelect}
+        />
+      )}
+
+      {showMiniGame && (
+        <MiniGameModal
+          onClose={() => setShowMiniGame(false)}
+          onComplete={(res, game) => {
+            onMiniGameComplete(res, game);
+            setShowMiniGame(false);
+          }}
+        />
+      )}
+    </LcdScreen>
+  );
+};
+
+const MarketScreen = ({
+  gameState,
+  onBuy,
+  onNavigate,
+}: {
+  gameState: GameState;
+  onBuy: (item: Item) => void;
+  onNavigate: (s: Screen) => void;
+}) => {
+  const [tab, setTab] = useState<'FOOD' | 'TOY' | 'ACCESSORY'>(
+    'FOOD',
+  );
+  const filteredItems = ITEMS.filter(
+    (item) => item.type === tab,
+  );
 
   return (
     <div className="h-full bg-[#0D0D0D] text-[#C2D5C4] font-pixel p-4 flex flex-col border-4 border-gray-600">
@@ -993,11 +1509,14 @@ const MarketScreen = ({ gameState, onBuy, onNavigate }: any) => {
           <span>{gameState.currency}</span>
         </div>
       </div>
+
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
         <button
           onClick={() => setTab('FOOD')}
           className={`px-2 py-2 text-xs border-2 border-[#C2D5C4] ${
-            tab === 'FOOD' ? 'bg-[#C2D5C4] text-black' : 'text-[#C2D5C4]'
+            tab === 'FOOD'
+              ? 'bg-[#C2D5C4] text-black'
+              : 'text-[#C2D5C4]'
           }`}
         >
           Yiyecek
@@ -1005,7 +1524,9 @@ const MarketScreen = ({ gameState, onBuy, onNavigate }: any) => {
         <button
           onClick={() => setTab('TOY')}
           className={`px-2 py-2 text-xs border-2 border-[#C2D5C4] ${
-            tab === 'TOY' ? 'bg-[#C2D5C4] text-black' : 'text-[#C2D5C4]'
+            tab === 'TOY'
+              ? 'bg-[#C2D5C4] text-black'
+              : 'text-[#C2D5C4]'
           }`}
         >
           Oyuncak
@@ -1013,12 +1534,15 @@ const MarketScreen = ({ gameState, onBuy, onNavigate }: any) => {
         <button
           onClick={() => setTab('ACCESSORY')}
           className={`px-2 py-2 text-xs border-2 border-[#C2D5C4] ${
-            tab === 'ACCESSORY' ? 'bg-[#C2D5C4] text-black' : 'text-[#C2D5C4]'
+            tab === 'ACCESSORY'
+              ? 'bg-[#C2D5C4] text-black'
+              : 'text-[#C2D5C4]'
           }`}
         >
           Aksesuar
         </button>
       </div>
+
       <div className="grid grid-cols-2 gap-4 overflow-y-auto pb-4 pr-1">
         {filteredItems.map((item) => (
           <div
@@ -1027,19 +1551,21 @@ const MarketScreen = ({ gameState, onBuy, onNavigate }: any) => {
           >
             <div className="bg-[#1a1a1a] aspect-square w-full flex items-center justify-center border-2 border-[#C2D5C4]/30">
               <div className="w-full h-full p-2 flex items-center justify-center">
-                <ProceduralIcon type={item.image} size={48} />
+                <ProceduralIcon
+                  type={item.image}
+                  size={48}
+                />
               </div>
             </div>
             <div className="text-[10px] leading-tight h-5 truncate text-center mt-1">
               {item.name}
             </div>
             <div className="flex justify-between items-center mt-auto border-t border-[#C2D5C4]/20 pt-2">
-              <span className="text-xs text-[#facc15]">{item.price} G</span>
+              <span className="text-xs text-[#facc15]">
+                {item.price} G
+              </span>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onBuy(item);
-                }}
+                onClick={() => onBuy(item)}
                 disabled={gameState.currency < item.price}
                 className="bg-[#C2D5C4] text-[#0D0D0D] px-2 py-1 text-[10px] hover:bg-white disabled:opacity-50 transition-all font-bold"
               >
@@ -1049,6 +1575,7 @@ const MarketScreen = ({ gameState, onBuy, onNavigate }: any) => {
           </div>
         ))}
       </div>
+
       <div className="mt-auto pt-4 border-t-4 border-[#C2D5C4] flex justify-center">
         <button
           onClick={() => onNavigate(Screen.MAIN)}
@@ -1070,25 +1597,32 @@ const StatsScreen = ({
 }) => {
   const { dragon } = gameState;
   let visualStage: 'baby' | 'adult' | 'old' = 'baby';
-  if (dragon.stage === DragonStage.ELDER) visualStage = 'old';
-  else if (
+  if (dragon.stage === DragonStage.ELDER) {
+    visualStage = 'old';
+  } else if (
     dragon.stage === DragonStage.ADULT ||
     dragon.stage === DragonStage.TEEN
-  )
+  ) {
     visualStage = 'adult';
+  }
 
   return (
     <div className="h-full bg-[#d4b4b4] text-black font-retro text-xl p-4 flex flex-col border-8 border-black relative">
       <div className="flex justify-between items-center border-b-4 border-black pb-2 mb-4">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined">pets</span>
+          <span className="material-symbols-outlined">
+            pets
+          </span>
           <span>{dragon.name}</span>
         </div>
         <div className="flex items-center gap-2 text-lg">
           <span>LVL {dragon.evolutionStage}</span>
-          <span className="material-symbols-outlined">signal_cellular_alt</span>
+          <span className="material-symbols-outlined">
+            signal_cellular_alt
+          </span>
         </div>
       </div>
+
       <div className="flex flex-col items-center mb-6">
         <div className="w-32 h-32 border-4 border-black bg-[#8a9980] p-2">
           <ProceduralDragon
@@ -1102,7 +1636,10 @@ const StatsScreen = ({
           <div
             className="h-full bg-black"
             style={{
-              width: `${Math.min(100, (dragon.xp / dragon.maxXp) * 100)}%`,
+              width: `${Math.min(
+                100,
+                (dragon.xp / dragon.maxXp) * 100,
+              )}%`,
             }}
           />
           <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-[#9EAE94] mix-blend-difference">
@@ -1113,6 +1650,7 @@ const StatsScreen = ({
           {dragon.stage}
         </div>
       </div>
+
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4 text-lg">
         <div className="flex justify-between border-b-2 border-black/20">
           <span>GÜÇ</span>
@@ -1131,9 +1669,11 @@ const StatsScreen = ({
           <span>{dragon.stats.agi}</span>
         </div>
       </div>
+
       <div className="mt-auto text-sm text-center opacity-70 mb-2">
         YAŞ: {Math.floor(dragon.age)} GÜN
       </div>
+
       <button
         onClick={() => onNavigate(Screen.MAIN)}
         className="w-full py-4 bg-black text-[#d4b4b4] text-center hover:opacity-90 active:scale-95 transition-transform border-4 border-transparent hover:border-white"
@@ -1144,765 +1684,64 @@ const StatsScreen = ({
   );
 };
 
-// --- Main Game Screen ---
-
-const MainGameScreen = ({
-  gameState,
-  onAction,
-  onNavigate,
-  onPet,
-  notifications,
-  onMiniGameComplete,
-  onRequestNotify,
-  hasNotifyPermission,
-  onOpenQuests,
-}: any) => {
-    type MiniGameType =
-    | 'NONE'
-    | 'CATCH_APPLE'
-    | 'CATCH_STAR'
-    | 'TAP_DRACO'
-    | 'RPS'
-    | 'MATH'
-    | 'FLAME_SHOW';   // 🔥 Draco’s Flame Show
-  
-  const { dragon, weather } = gameState;
-
-  const [showInventory, setShowInventory] = useState(false);
-
-  const [position, setPosition] = useState({ x: 50, y: 50 });
-  const [actionAnimation, setActionAnimation] = useState<string | null>(null);
-  const [isMoving, setIsMoving] = useState(false);
-
-  const [fetchMode, setFetchMode] = useState(false);
-  const [ballPos, setBallPos] = useState({ x: -100, y: -100 });
-
-  const [miniGameMenuOpen, setMiniGameMenuOpen] = useState(false);
-  const [activeMiniGame, setActiveMiniGame] = useState<MiniGameType>('NONE');
-  const [gameTime, setGameTime] = useState(0);
-  const [gameScore, setGameScore] = useState(0);
-  const [targetScore, setTargetScore] = useState(0);
-  const [gameLabel, setGameLabel] = useState('');
-  const [targetPos, setTargetPos] = useState({ x: 50, y: 50 });
-
-  const miniGameInterval = useRef<number | null>(null);
-  const gameScoreRef = useRef(0);
-
-  const [rpsResult, setRpsResult] = useState<string | null>(null);
-  const [mathQ, setMathQ] = useState<{
-    text: string;
-    ans: number;
-    options: number[];
-  } | null>(null);
-  const [tapHighlight, setTapHighlight] = useState(false);
-
-  useEffect(() => {
-    if (actionAnimation) {
-      const timer = setTimeout(() => setActionAnimation(null), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [actionAnimation]);
-
-  useEffect(() => {
-    return () => {
-      if (miniGameInterval.current) window.clearInterval(miniGameInterval.current);
-    };
-  }, []);
-
-  const handleScreenClick = (e: React.MouseEvent) => {
-    if (activeMiniGame !== 'NONE' || miniGameMenuOpen) return;
-    if (dragon.isSleeping) return;
-
-    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    const clampedX = Math.max(15, Math.min(85, x));
-    const clampedY = Math.max(20, Math.min(70, y));
-
-    if (fetchMode) {
-      setBallPos({ x: clampedX, y: clampedY });
-      setPosition({ x: clampedX, y: clampedY });
-      setIsMoving(true);
-
-      setTimeout(() => {
-        setIsMoving(false);
-        setBallPos({ x: -100, y: -100 });
-        setFetchMode(false);
-        onAction({ type: 'FETCH_SUCCESS' });
-      }, 1500);
-    } else {
-      setPosition({ x: clampedX, y: clampedY });
-      setIsMoving(true);
-      setTimeout(() => setIsMoving(false), 1000);
-    }
-  };
-
-    const handleItemSelect = (item: Item) => {
-    setShowInventory(false);
-    if (item.type === 'FOOD') {
-      onAction({ type: 'USE_ITEM', item });
-      if (item.id.includes('potion')) setActionAnimation('rainbow');
-      else setActionAnimation('feeding');
-    } else if (item.type === 'TOY') {
-      if (item.id === 'ball') {
-        setFetchMode(true);
-        onAction({
-          type: 'NOTIFY',
-          text: 'TOPU FIRLATMAK IÇIN TIKLA',
-          color: '#ef4444',
-        });
-      } else if (item.id === 'flame_show') {
-        // 🎪 Draco's Flame Show mini oyununu başlat
-        onAction({ type: 'USE_ITEM', item });      // ödüller / enerji tüketimi
-        startMiniGame('FLAME_SHOW');               // ekran içi mini oyun
-      } else {
-        onAction({ type: 'USE_ITEM', item });
-        setActionAnimation('playing');
-      }
-    } else if (item.type === 'ACCESSORY') {
-      onAction({ type: 'EQUIP', item });
-    }
-  };
-  
-  const startMiniGame = (type: MiniGameType) => {
-    if (type === 'NONE') return;
-
-    setActiveMiniGame(type);
-    setMiniGameMenuOpen(false);
-
-    if (miniGameInterval.current)
-      window.clearInterval(miniGameInterval.current);
-
-    setGameScore(0);
-    gameScoreRef.current = 0;
-    setGameTime(0);
-    setTargetScore(0);
-    setRpsResult(null);
-    setMathQ(null);
-    setTapHighlight(false);
-
-    if (type === 'CATCH_APPLE' || type === 'CATCH_STAR') {
-      const isStar = type === 'CATCH_STAR';
-      const totalTime = isStar ? 12 : 10;
-      const needScore = isStar ? 8 : 5;
-      const tickMs = isStar ? 700 : 900;
-
-      setGameLabel(isStar ? 'YILDIZ YAKALAMA' : 'ELMA YAKALAMA');
-      setGameTime(totalTime);
-      setTargetScore(needScore);
-      setTargetPos({ x: 50, y: 50 });
-
-      miniGameInterval.current = window.setInterval(() => {
-        setGameTime((t) => {
-          if (t <= 1) {
-            if (miniGameInterval.current)
-              window.clearInterval(miniGameInterval.current);
-            const result: 'WIN' | 'LOSE' =
-              gameScoreRef.current >= needScore ? 'WIN' : 'LOSE';
-            onMiniGameComplete(result, type);
-            setActiveMiniGame('NONE');
-            return 0;
-          }
-          return t - 1;
-        });
-
-        setTargetPos({
-          x: 15 + Math.random() * 70,
-          y: 30 + Math.random() * 40,
-        });
-      }, tickMs);
-    } else if (type === 'TAP_DRACO') {
-      const totalTime = 12;
-      const needScore = 7;
-      setGameLabel('DRACOYA DOKUN');
-      setGameTime(totalTime);
-      setTargetScore(needScore);
-
-      miniGameInterval.current = window.setInterval(() => {
-        setGameTime((t) => {
-          if (t <= 1) {
-            if (miniGameInterval.current)
-              window.clearInterval(miniGameInterval.current);
-            const result: 'WIN' | 'LOSE' =
-              gameScoreRef.current >= needScore ? 'WIN' : 'LOSE';
-            onMiniGameComplete(result, 'TAP_DRACO');
-            setActiveMiniGame('NONE');
-            setTapHighlight(false);
-            return 0;
-          }
-          return t - 1;
-        });
-
-        setTapHighlight(Math.random() < 0.5);
-      }, 700);
-    } else if (type === 'RPS') {
-      setGameLabel('TAŞ KAĞIT MAKAS');
-    } else if (type === 'MATH') {
-      const a = Math.floor(2 + Math.random() * 8);
-      const b = Math.floor(2 + Math.random() * 8);
-      const ans = a + b;
-      const options = [ans, ans + 1, ans - 1, ans + 2].sort(
-        () => Math.random() - 0.5,
-      );
-      setMathQ({
-        text: `${a} + ${b} = ?`,
-        ans,
-        options,
-      });
-      setGameLabel('MATEMATİK');
-    } else if (type === 'FLAME_SHOW') {
-      const totalTime = 6;
-      setGameLabel("Draco's Flame Show");
-      setGameTime(totalTime);
-
-      miniGameInterval.current = window.setInterval(() => {
-        setGameTime((t) => {
-          if (t <= 1) {
-            if (miniGameInterval.current)
-              window.clearInterval(miniGameInterval.current);
-
-            // Bu oyunda skor yok, gösteri izlenince direkt kazan
-            onMiniGameComplete('WIN', 'FLAME_SHOW');
-            setActiveMiniGame('NONE');
-            return 0;
-          }
-          return t - 1;
-        });
-      }, 1000);
-  };
-
-  const handleCatchClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (
-      activeMiniGame !== 'CATCH_APPLE' &&
-      activeMiniGame !== 'CATCH_STAR'
-    )
-      return;
-
-    setGameScore((prev) => {
-      const ns = prev + 1;
-      gameScoreRef.current = ns;
-      return ns;
-    });
-  };
-
-  const handleDragonClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (activeMiniGame === 'TAP_DRACO') {
-      if (tapHighlight) {
-        setGameScore((prev) => {
-          const ns = prev + 1;
-          gameScoreRef.current = ns;
-          return ns;
-        });
-        onAction({
-          type: 'NOTIFY',
-          text: '+1',
-          color: '#22c55e',
-        });
-      }
-    } else {
-      onPet();
-    }
-  };
-
-  const handleRpsChoice = (choice: 'ROCK' | 'PAPER' | 'SCISSORS') => {
-    if (activeMiniGame !== 'RPS') return;
-    const options = ['ROCK', 'PAPER', 'SCISSORS'] as const;
-    const cpu = options[Math.floor(Math.random() * 3)];
-    let res: 'WIN' | 'LOSE' | 'DRAW' = 'DRAW';
-
-    if (choice !== cpu) {
-      if (
-        (choice === 'ROCK' && cpu === 'SCISSORS') ||
-        (choice === 'PAPER' && cpu === 'ROCK') ||
-        (choice === 'SCISSORS' && cpu === 'PAPER')
-      ) {
-        res = 'WIN';
-      } else {
-        res = 'LOSE';
-      }
-    }
-
-    setRpsResult(`${choice} vs ${cpu} → ${res}`);
-    onMiniGameComplete(res, 'RPS');
-
-    setTimeout(() => {
-      setActiveMiniGame('NONE');
-      setRpsResult(null);
-    }, 1200);
-  };
-
-  const handleMathChoice = (val: number) => {
-    if (activeMiniGame !== 'MATH' || !mathQ) return;
-    const res: 'WIN' | 'LOSE' = val === mathQ.ans ? 'WIN' : 'LOSE';
-    onMiniGameComplete(res, 'MATH');
-    setActiveMiniGame('NONE');
-  };
-
-    let overrideMode: string | null =
-    actionAnimation || (fetchMode && ballPos.x > -1 ? 'fetch' : null);
-
-  if (activeMiniGame === 'TAP_DRACO' && tapHighlight) {
-    overrideMode = 'excited';
-  }
-  if (activeMiniGame === 'RPS' || activeMiniGame === 'MATH') {
-    overrideMode = 'idle';
-  }
-  if (activeMiniGame === 'FLAME_SHOW') {
-    // Draco ateş çemberinden geçerken uçuyormuş gibi görünsün
-    overrideMode = 'fly';
-  }
-  return (
-    <LcdScreen
-      className="flex flex-col relative"
-      isNight={dragon.isSleeping}
-      onClick={handleScreenClick}
-    >
-      <Clouds />
-      <WeatherOverlay weather={weather} />
-      <FloatingTextOverlay items={notifications} />
-
-      {/* HUD */}
-      <div className="flex justify-between items-start mb-4 relative z-30 pointer-events-none">
-        <div className="flex flex-col gap-2 w-1/2">
-          <StatBar icon="nutrition" value={dragon.hunger} />
-          <StatBar icon="favorite" value={dragon.happiness} />
-        </div>
-        <div className="flex flex-col gap-2 w-1/2 items-end">
-          <StatBar icon="cleaning_services" value={dragon.hygiene} reverse />
-          <StatBar icon="bolt" value={dragon.energy} reverse />
-        </div>
-      </div>
-
-      {/* Oyun sahnesi */}
-      <div className="flex-1 relative z-0 overflow-hidden">
-        {fetchMode && ballPos.x > -1 && (
-          <div
-            className="absolute z-10 transition-all duration-1000"
-            style={{
-              left: `${ballPos.x}%`,
-              top: `${ballPos.y}%`,
-              transform: 'translate(-50%, -50%) rotate(360deg)',
-            }}
-          >
-            <ProceduralIcon type="BALL" size={24} />
-          </div>
-        )}
-
-        <div
-          className="absolute w-48 h-48 transition-all duration-1000 ease-in-out"
-          style={{
-            left: `${position.x}%`,
-            top: `${position.y}%`,
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          <DragonCharacter
-            dragon={dragon}
-            onClick={handleDragonClick}
-            overrideMode={overrideMode}
-            isMoving={isMoving}
-          />
-        </div>
-
-        {Array.from({ length: dragon.poops }).map((_, i) => (
-          <span
-            key={i}
-            className="absolute bottom-4 text-2xl font-pixel animate-bounce z-20"
-            style={{ right: `${20 + i * 24}px` }}
-          >
-            💩
-          </span>
-        ))}
-
-        {dragon.isSleeping && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-xs animate-pulse bg-black/50 px-2 py-1">
-            Uyuyor...
-          </div>
-        )}
-
-        {fetchMode && ballPos.x === -100 && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-black bg-white/80 px-2 py-1 text-xs border-2 border-black animate-bounce pointer-events-none">
-            TOPU FIRLAT!
-          </div>
-        )}
-
-        {/* Mini oyun seçme menüsü */}
-        {miniGameMenuOpen && activeMiniGame === 'NONE' && (
-          <div className="absolute inset-0 z-30 bg-black/70 flex items-center justify-center pointer-events-auto">
-            <div className="bg-lcd-bg border-4 border-lcd-fg p-3 w-full max-w-[260px] shadow-pixel text-center">
-              <h3 className="text-xs font-pixel mb-3 border-b-2 border-lcd-fg pb-1">
-                MINI OYUN SEÇ
-              </h3>
-              <div className="flex flex-col gap-2 text-[11px]">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startMiniGame('CATCH_APPLE');
-                  }}
-                  className="border-2 border-lcd-fg py-1 hover:bg-black/10"
-                >
-                  🍎 ELMA YAKALAMA
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startMiniGame('CATCH_STAR');
-                  }}
-                  className="border-2 border-lcd-fg py-1 hover:bg-black/10"
-                >
-                  ⭐ YILDIZ YAKALAMA
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startMiniGame('TAP_DRACO');
-                  }}
-                  className="border-2 border-lcd-fg py-1 hover:bg-black/10"
-                >
-                  ✋ DRACOYA DOKUN
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startMiniGame('RPS');
-                  }}
-                  className="border-2 border-lcd-fg py-1 hover:bg-black/10"
-                >
-                  ✊🖐✌ TAŞ KAĞIT MAKAS
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startMiniGame('MATH');
-                  }}
-                  className="border-2 border-lcd-fg py-1 hover:bg-black/10"
-                >
-                  ➕ MATEMATİK SORUSU
-                </button>
-               <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startMiniGame('FLAME_SHOW');
-                  }}
-                  className="border-2 border-lcd-fg py-1 hover:bg-black/10"
-                >
-                  🔥 Draco's Flame Show
-                </button>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMiniGameMenuOpen(false);
-                }}
-                className="mt-3 text-[10px] underline"
-              >
-                İPTAL
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Mini oyun overlay’leri */}
-        {activeMiniGame !== 'NONE' && (
-          <div className="absolute inset-0 z-20 pointer-events-none">
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-2 py-1 rounded pointer-events-auto">
-              {gameLabel}
-              {(activeMiniGame === 'CATCH_APPLE' ||
-                activeMiniGame === 'CATCH_STAR' ||
-                activeMiniGame === 'TAP_DRACO') &&
-                ` · SÜRE: ${gameTime} · SKOR: ${gameScore}/${targetScore}`}
-            </div>
-
-            {(activeMiniGame === 'CATCH_APPLE' ||
-              activeMiniGame === 'CATCH_STAR') && (
-              <button
-                className="absolute w-8 h-8 flex items-center justify-center pointer-events-auto"
-                style={{
-                  left: `${targetPos.x}%`,
-                  top: `${targetPos.y}%`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-                onClick={handleCatchClick}
-              >
-                <ProceduralIcon
-                  type={activeMiniGame === 'CATCH_APPLE' ? 'APPLE' : 'STAR'}
-                  size={32}
-                />
-              </button>
-            )}
-
-            {activeMiniGame === 'TAP_DRACO' && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white text-[10px] px-3 py-1 rounded pointer-events-auto text-center">
-                Draco parladığında ona dokun! (+1)
-              </div>
-            )}
-
-            {activeMiniGame === 'RPS' && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
-                <div className="bg-lcd-bg border-4 border-lcd-fg p-3 w-full max-w-[260px] shadow-pixel text-center">
-                  <h3 className="text-xs font-pixel mb-2">TAŞ KAĞIT MAKAS</h3>
-                  <div className="flex justify-center gap-2 mb-2 text-[11px]">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRpsChoice('ROCK');
-                      }}
-                      className="border-2 border-lcd-fg px-2 py-1 hover:bg-black/10"
-                    >
-                      ✊ TAŞ
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRpsChoice('PAPER');
-                      }}
-                      className="border-2 border-lcd-fg px-2 py-1 hover:bg-black/10"
-                    >
-                      🖐 KAĞIT
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRpsChoice('SCISSORS');
-                      }}
-                      className="border-2 border-lcd-fg px-2 py-1 hover:bg-black/10"
-                    >
-                      ✌ MAKAS
-                    </button>
-                  </div>
-                  {rpsResult && (
-                    <div className="text-[11px] mt-1">{rpsResult}</div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeMiniGame === 'MATH' && mathQ && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
-                <div className="bg-lcd-bg border-4 border-lcd-fg p-3 w-full max-w-[260px] shadow-pixel text-center">
-                  <h3 className="text-xs font-pixel mb-2">MATEMATİK</h3>
-                  <div className="mb-2 text-[12px] font-bold">
-                    {mathQ.text}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
-                    {mathQ.options.map((o) => (
-                      <button
-                        key={o}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMathChoice(o);
-                        }}
-                        className="border-2 border-lcd-fg px-2 py-1 hover:bg-black/10"
-                      >
-                        {o}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-             
-            {activeMiniGame === 'FLAME_SHOW' && (
-              <>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-24 h-24 flex items-center justify-center animate-bounce">
-                    <ProceduralIcon type="CIRCUS_RING" size={64} />
-                  </div>
-                </div>
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] px-3 py-1 rounded border-2 border-[#facc15] bg-black/70 text-[#facc15] pointer-events-none font-pixel">
-                  Draco's Flame Show!
-                </div>
-              </>
-            )}
-              </div>
-            )}
-          </div>
-      </div>
-      )}
-
-      {/* Alt butonlar + bildirim + görev ikonu */}
-      <div className="flex justify-between items-center mt-2 px-1 relative z-30 pointer-events-auto">
-        <div className="flex gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onNavigate(Screen.STATS);
-            }}
-            disabled={dragon.isSleeping}
-            className="hover:bg-black/10 p-1 rounded"
-          >
-            <span className="material-symbols-outlined">bar_chart</span>
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onNavigate(Screen.MARKET);
-            }}
-            disabled={dragon.isSleeping}
-            className="hover:bg-black/10 p-1 rounded"
-          >
-            <span className="material-symbols-outlined">storefront</span>
-          </button>
-        </div>
-        <div className="flex gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenQuests();
-            }}
-            className="hover:bg-black/10 p-1 rounded text-amber-700"
-          >
-            <span className="material-symbols-outlined">flag</span>
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onRequestNotify();
-            }}
-            className={`hover:bg-black/10 p-1 rounded ${
-              hasNotifyPermission
-                ? 'text-black opacity-50'
-                : 'text-red-600 animate-bounce'
-            }`}
-          >
-            <span className="material-symbols-outlined">
-              {hasNotifyPermission ? 'notifications_active' : 'notifications_off'}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-2 mt-2 relative z-30 pointer-events-auto">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowInventory(true);
-          }}
-          disabled={dragon.isSleeping}
-          className="flex flex-col items-center p-2 border-2 border-lcd-fg hover:bg-black/10 active:translate-y-1 bg-lcd-bg"
-        >
-          <span className="material-symbols-outlined">backpack</span>
-          <span className="text-[10px] mt-1 hidden sm:block">ÇANTA</span>
-        </button>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (dragon.energy <= 15) {
-              onAction({ type: 'PLAY' });
-            } else if (activeMiniGame === 'NONE') {
-              setMiniGameMenuOpen(true);
-            }
-          }}
-          disabled={dragon.isSleeping}
-          className="flex flex-col items-center p-2 border-2 border-lcd-fg hover:bg-black/10 active:translate-y-1 bg-lcd-bg"
-        >
-          <span className="material-symbols-outlined">sports_esports</span>
-          <span className="text-[10px] mt-1 hidden sm:block">OYNA</span>
-        </button>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onAction({ type: 'CLEAN' });
-          }}
-          disabled={dragon.isSleeping}
-          className="flex flex-col items-center p-2 border-2 border-lcd-fg hover:bg-black/10 active:translate-y-1 bg-lcd-bg"
-        >
-          <span className="material-symbols-outlined">soap</span>
-          <span className="text-[10px] mt-1 hidden sm:block">TEMİZLE</span>
-        </button>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onAction({ type: 'SLEEP' });
-          }}
-          className={`flex flex-col items-center p-2 border-2 border-lcd-fg hover:bg-black/10 active:translate-y-1 transition-all ${
-            dragon.isSleeping ? 'bg-black text-white' : 'bg-lcd-bg'
-          }`}
-        >
-          <span className="material-symbols-outlined">bedtime</span>
-          <span className="text-[10px] mt-1 hidden sm:block">UYKU</span>
-        </button>
-      </div>
-
-      {showInventory && (
-        <InventoryModal
-          inventory={gameState.inventory}
-          onClose={() => setShowInventory(false)}
-          onSelect={handleItemSelect}
-        />
-      )}
-    </LcdScreen>
-  );
-};
-
 // --- Root App ---
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>({
     ...INITIAL_GAME_STATE,
-    dragon: { ...INITIAL_GAME_STATE.dragon, name: 'DRACO' },
+    dragon: {
+      ...INITIAL_GAME_STATE.dragon,
+      name: 'DRACO',
+    },
   });
+
   const [hasSave, setHasSave] = useState(false);
-  const [notifications, setNotifications] = useState<FloatingText[]>([]);
-  const [hasNotifyPermission, setHasNotifyPermission] = useState(false);
+  const [notifications, setNotifications] = useState<FloatingText[]>(
+    [],
+  );
+  const [hasNotifyPermission, setHasNotifyPermission] =
+    useState(false);
+
   const tickRef = useRef<number | null>(null);
   const lastNotificationTime = useRef<number>(0);
 
-  const [pendingLevelUps, setPendingLevelUps] = useState(0);
-  const [showQuestModal, setShowQuestModal] = useState(false);
-
+  // Load save + notification permission
   useEffect(() => {
     const saved = localStorage.getItem('dragon_save');
-    if (saved) setHasSave(true);
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted')
+    if (saved) {
+      setHasSave(true);
+    }
+    if (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'granted'
+    ) {
       setHasNotifyPermission(true);
+    }
   }, []);
 
-  // Günlük görevleri başlat (şimdilik tek görev: mini oyun oyna)
-  useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    setGameState((prev) => {
-      if (prev.lastQuestDate === today && prev.dailyQuests.length > 0) return prev;
+  const requestNotify = async () => {
+    if (typeof window === 'undefined') return;
+    if (!('Notification' in window)) return;
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      setHasNotifyPermission(true);
+      addNotification('BİLDİRİMLER AÇIK', '#16a34a');
+    }
+  };
 
-      const newQuests: DailyQuest[] = [
-        {
-          id: 'play_games',
-          description: 'Mini oyun oyna: 3 kez',
-          target: 3,
-          progress: 0,
-          rewardGold: 80,
-          rewardXp: 30,
-          completed: false,
-        },
-      ];
+  const trySendNotification = (title: string, body: string) => {
+    if (typeof window === 'undefined') return;
+    if (!hasNotifyPermission) return;
+    const now = Date.now();
+    if (now - lastNotificationTime.current < 600000) return;
+    if (document.visibilityState === 'hidden') {
+      new Notification(title, { body });
+      lastNotificationTime.current = now;
+    }
+  };
 
-      let newStreak = prev.dailyStreak || 0;
-      if (!prev.lastQuestDate) {
-        newStreak = 1;
-      } else {
-        const last = new Date(prev.lastQuestDate);
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        if (last.toDateString() === yesterday.toDateString()) {
-          newStreak = newStreak + 1;
-        } else if (last.toDateString() !== new Date(today).toDateString()) {
-          newStreak = 1;
-        }
-      }
-
-      return {
-        ...prev,
-        dailyQuests: newQuests,
-        lastQuestDate: today,
-        dailyStreak: newStreak,
-      };
-    });
-  }, []);
-
-  const addNotification = (text: string, color: string = '#21221d') => {
+  const addNotification = (text: string, color = '#21221d') => {
     const id = Date.now() + Math.random();
     setNotifications((prev) => [
       ...prev,
@@ -1914,32 +1753,11 @@ export default function App() {
         color,
       },
     ]);
-    setTimeout(
-      () => setNotifications((prev) => prev.filter((n) => n.id !== id)),
-      1500,
-    );
-  };
-
-  const requestNotify = async () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      setHasNotifyPermission(true);
-      addNotification('BILDIRIMLER AÇIK', '#16a34a');
-    }
-  };
-
-  const trySendNotification = (title: string, body: string) => {
-    if (typeof document === 'undefined' || typeof Notification === 'undefined') return;
-    const now = Date.now();
-    if (
-      hasNotifyPermission &&
-      now - lastNotificationTime.current > 600000 &&
-      document.visibilityState === 'hidden'
-    ) {
-      new Notification(title, { body });
-      lastNotificationTime.current = now;
-    }
+    setTimeout(() => {
+      setNotifications((prev) =>
+        prev.filter((n) => n.id !== id),
+      );
+    }, 1500);
   };
 
   useEffect(() => {
@@ -1947,12 +1765,18 @@ export default function App() {
 
     tickRef.current = window.setInterval(() => {
       setGameState((prev) => {
-        if (prev.dragon.stage === DragonStage.EGG) return prev;
+        if (prev.dragon.stage === DragonStage.EGG) {
+          return prev;
+        }
+
         const isSleeping = prev.dragon.isSleeping;
         const accessory = prev.dragon.equippedAccessory;
 
         const hungerDecay = isSleeping ? 0.05 : 0.2;
-        const newHunger = Math.max(0, prev.dragon.hunger - hungerDecay);
+        const newHunger = Math.max(
+          0,
+          prev.dragon.hunger - hungerDecay,
+        );
 
         let newEnergy = isSleeping
           ? Math.min(100, prev.dragon.energy + 1.5)
@@ -1960,60 +1784,71 @@ export default function App() {
 
         let newHygiene = Math.max(
           0,
-          prev.dragon.hygiene - 0.05 * prev.buffs.hygieneDecayMultiplier,
+          prev.dragon.hygiene - 0.05,
         );
         let newPoops = prev.dragon.poops;
         if (
           newHygiene < 60 &&
           prev.dragon.poops === 0 &&
           Math.random() < 0.05
-        )
+        ) {
           newPoops++;
+        }
 
         let happinessDecay = 0.1;
         if (newHunger < 20) happinessDecay += 0.2;
         if (newHygiene < 40) happinessDecay += 0.2;
-
-        if (accessory === 'glasses') happinessDecay *= 0.7;
-        happinessDecay *= prev.buffs.happinessDecayMultiplier;
+        if (accessory === 'glasses') {
+          happinessDecay *= 0.7;
+        }
 
         const newHappiness = Math.max(
           0,
-          prev.dragon.happiness - (isSleeping ? 0 : happinessDecay),
+          prev.dragon.happiness -
+            (isSleeping ? 0 : happinessDecay),
         );
 
         let newSleeping = isSleeping;
-        if (isSleeping && newEnergy >= 100) newSleeping = false;
+        if (isSleeping && newEnergy >= 100) {
+          newSleeping = false;
+        }
 
         let newStage = prev.dragon.stage;
         let newEvolutionStage = prev.dragon.evolutionStage;
         let newMaxXp = prev.dragon.maxXp;
         let newXp = prev.dragon.xp;
 
-        if (accessory === 'hat') newXp += 0.05;
+        if (accessory === 'hat') {
+          newXp += 0.05;
+        }
 
-        let levelUps = 0;
-        while (newXp >= newMaxXp) {
+        if (newXp >= newMaxXp) {
           newXp -= newMaxXp;
           newEvolutionStage++;
           newMaxXp = Math.floor(newMaxXp * 1.5);
-          levelUps++;
-          if (newEvolutionStage === 3) newStage = DragonStage.TEEN;
-          if (newEvolutionStage === 5) newStage = DragonStage.ADULT;
-          if (newEvolutionStage === 8) newStage = DragonStage.ELDER;
-        }
-
-        if (levelUps > 0) {
-          setPendingLevelUps((c) => c + levelUps);
-          addNotification('SEVİYE ATLADIN!', '#fbbf24');
+          if (newEvolutionStage === 3) {
+            newStage = DragonStage.TEEN;
+          }
+          if (newEvolutionStage === 5) {
+            newStage = DragonStage.ADULT;
+          }
+          if (newEvolutionStage === 8) {
+            newStage = DragonStage.ELDER;
+          }
         }
 
         let newWeather = prev.weather;
-        if (Math.random() < 0.005)
-          newWeather = prev.weather === 'SUNNY' ? 'RAIN' : 'SUNNY';
+        if (Math.random() < 0.005) {
+          newWeather =
+            prev.weather === 'SUNNY' ? 'RAIN' : 'SUNNY';
+        }
 
-        if (newHunger < 30)
-          trySendNotification('Draco Acıktı!', 'Ejderhanın karnı gurulduyor!');
+        if (newHunger < 30) {
+          trySendNotification(
+            'Draco Acıktı!',
+            'Ejderhanın karnı gurulduyor!',
+          );
+        }
 
         return {
           ...prev,
@@ -2036,13 +1871,17 @@ export default function App() {
       });
     }, 1000);
 
-    const saveInterval = window.setInterval(
-      () => localStorage.setItem('dragon_save', JSON.stringify(gameState)),
-      30000,
-    );
+    const saveInterval = window.setInterval(() => {
+      localStorage.setItem(
+        'dragon_save',
+        JSON.stringify(gameState),
+      );
+    }, 30000);
 
     return () => {
-      if (tickRef.current) clearInterval(tickRef.current);
+      if (tickRef.current) {
+        clearInterval(tickRef.current);
+      }
       clearInterval(saveInterval);
     };
   }, [gameState.screen, hasNotifyPermission, gameState]);
@@ -2054,30 +1893,35 @@ export default function App() {
       const d = { ...prev.dragon };
       let inv = { ...prev.inventory };
       let currency = prev.currency;
-      let dailyQuests = prev.dailyQuests;
 
       if (type === 'USE_ITEM') {
         const item = action.item as Item;
         if (inv[item.id] > 0) {
           inv[item.id]--;
-          d.hunger = Math.min(100, d.hunger + (item.effect.hunger || 0));
+          d.hunger = Math.min(
+            100,
+            d.hunger + (item.effect.hunger || 0),
+          );
           d.happiness = Math.min(
             100,
             d.happiness + (item.effect.happiness || 0),
           );
-          d.energy = Math.min(100, d.energy + (item.effect.energy || 0));
-          d.health = Math.min(100, d.health + (item.effect.health || 0));
-          if (item.type === 'TOY') d.energy = Math.max(0, d.energy - 5);
+          d.energy = Math.min(
+            100,
+            d.energy + (item.effect.energy || 0),
+          );
+          d.health = Math.min(
+            100,
+            d.health + (item.effect.health || 0),
+          );
+          if (item.type === 'TOY') {
+            d.energy = Math.max(0, d.energy - 5);
+          }
           addNotification(
             item.type === 'FOOD' ? 'YEDİ' : 'OYNADI',
             '#16a34a',
           );
         }
-      } else if (type === 'FETCH_SUCCESS') {
-        d.happiness = Math.min(100, d.happiness + 15);
-        d.energy = Math.max(0, d.energy - 5);
-        d.xp += 10;
-        addNotification('YAKALADI!', '#16a34a');
       } else if (type === 'EQUIP') {
         const item = action.item as Item;
         if (d.equippedAccessory === item.id) {
@@ -2094,7 +1938,7 @@ export default function App() {
           return prev;
         }
         d.happiness = Math.min(100, d.happiness + 15);
-        d.energy -= 15;
+        d.energy = Math.max(0, d.energy - 15);
         d.xp += 5;
         addNotification('MUTLU!', '#eab308');
       } else if (type === 'CLEAN') {
@@ -2112,68 +1956,85 @@ export default function App() {
         d.poops = 0;
       } else if (type === 'SLEEP') {
         d.isSleeping = !d.isSleeping;
-      } else if (type === 'NOTIFY') {
-        addNotification(action.text, action.color);
       }
 
-      return { ...prev, dragon: d, inventory: inv, currency, dailyQuests };
+      return { ...prev, dragon: d, inventory: inv, currency };
     });
   };
 
   const handleMiniGameComplete = (
     result: 'WIN' | 'LOSE' | 'DRAW',
-    gameType: string,
+    game: MiniGameType,
   ) => {
     setGameState((prev) => {
-      const dragon = { ...prev.dragon };
-      let goldGainBase = result === 'WIN' ? 50 : 10;
-      goldGainBase = Math.round(
-        goldGainBase * prev.buffs.miniGameGoldMultiplier,
-      );
+      let bonusGold = 0;
+      let mood = 0;
+      let energyCost = 10;
+      let xpGain = 10;
 
-      // Stat antrenmanı
       if (result === 'WIN') {
-        if (gameType === 'MATH') dragon.stats.int += 1;
-        if (gameType === 'CATCH_APPLE' || gameType === 'CATCH_STAR')
-          dragon.stats.agi += 1;
-        if (gameType === 'TAP_DRACO') dragon.stats.str += 1;
+        bonusGold = 50;
+        mood = 20;
+        xpGain = 20;
+      } else if (result === 'DRAW') {
+        bonusGold = 20;
+        mood = 10;
+        xpGain = 10;
+      } else {
+        bonusGold = 5;
+        mood = 5;
+        xpGain = 5;
       }
 
-      // Günlük görev: play_games
-      let extraGoldFromQuests = 0;
-      let extraXpFromQuests = 0;
-      const updatedQuests = prev.dailyQuests.map((q) => {
-        if (q.id === 'play_games' && !q.completed) {
-          const newProg = Math.min(q.target, q.progress + 1);
-          const completed = newProg >= q.target;
-          if (completed) {
-            extraGoldFromQuests += q.rewardGold;
-            extraXpFromQuests += q.rewardXp;
-          }
-          return { ...q, progress: newProg, completed };
-        }
-        return q;
-      });
-
-      const happinessDelta = result === 'WIN' ? 20 : 5;
+      if (game === 'FLAME_SHOW') {
+        bonusGold += 20;
+        xpGain += 10;
+      }
 
       return {
         ...prev,
-        currency: prev.currency + goldGainBase + extraGoldFromQuests,
-        dailyQuests: updatedQuests,
+        currency: prev.currency + bonusGold,
         dragon: {
-          ...dragon,
-          happiness: Math.min(100, dragon.happiness + happinessDelta),
-          energy: Math.max(0, dragon.energy - 10),
-          xp: dragon.xp + 15 + extraXpFromQuests,
+          ...prev.dragon,
+          happiness: Math.min(
+            100,
+            prev.dragon.happiness + mood,
+          ),
+          energy: Math.max(
+            0,
+            prev.dragon.energy - energyCost,
+          ),
+          xp: prev.dragon.xp + xpGain,
         },
       };
     });
 
-    addNotification(
-      result === 'WIN' ? 'ANTRENMAN BAŞARILI!' : 'FENA DEĞIL :)',
-      '#22c55e',
-    );
+    if (result === 'WIN') {
+      addNotification('KAZANDIN!', '#16a34a');
+    } else if (result === 'DRAW') {
+      addNotification('BERABERE', '#eab308');
+    } else {
+      addNotification('KAYBETTİN...', '#dc2626');
+    }
+  };
+
+  const handleBuy = (item: Item) => {
+    setGameState((prev) => {
+      if (prev.currency < item.price) {
+        addNotification('PARA YETERSİZ', '#dc2626');
+        return prev;
+      }
+      const newInv = {
+        ...prev.inventory,
+        [item.id]: (prev.inventory[item.id] || 0) + 1,
+      };
+      addNotification('SATIN ALINDI', '#facc15');
+      return {
+        ...prev,
+        currency: prev.currency - item.price,
+        inventory: newInv,
+      };
+    });
   };
 
   const handleHatch = () => {
@@ -2184,152 +2045,85 @@ export default function App() {
     addNotification('DOĞDU!', '#ef4444');
   };
 
-  const applyBuffChoice = (buff: BuffChoice) => {
-    setGameState((prev) => {
-      const buffs = { ...prev.buffs };
-      if (buff === 'HAPPINESS')
-        buffs.happinessDecayMultiplier = buffs.happinessDecayMultiplier * 0.85;
-      if (buff === 'HYGIENE')
-        buffs.hygieneDecayMultiplier = buffs.hygieneDecayMultiplier * 0.85;
-      if (buff === 'GOLD')
-        buffs.miniGameGoldMultiplier = buffs.miniGameGoldMultiplier * 1.2;
-      return { ...prev, buffs };
-    });
-    setPendingLevelUps((c) => Math.max(0, c - 1));
-    addNotification('YENİ PASİF ALDIN', '#facc15');
-  };
-
-  // --- Render ---
-
-  if (gameState.screen === Screen.START)
+  if (gameState.screen === Screen.START) {
     return (
       <StartScreen
         onStart={() =>
-          setGameState((prev) => ({ ...prev, screen: Screen.HATCH }))
+          setGameState((prev) => ({
+            ...prev,
+            screen: Screen.HATCH,
+          }))
         }
         onContinue={() => {
           const saved = localStorage.getItem('dragon_save');
-          if (saved) setGameState(JSON.parse(saved));
+          if (saved) {
+            setGameState(JSON.parse(saved));
+          }
         }}
         hasSave={hasSave}
       />
     );
+  }
 
-  if (gameState.dragon.stage === DragonStage.EGG)
+  if (gameState.dragon.stage === DragonStage.EGG) {
     return (
-      <>
-        <HatchingScreen
-          gameState={gameState}
-          onHatchTick={() => {
-            if (Math.random() > 0.8) setTimeout(handleHatch, 500);
-          }}
-        />
-        {pendingLevelUps > 0 && (
-          <LevelUpModal count={pendingLevelUps} onSelect={applyBuffChoice} />
-        )}
-        {showQuestModal && (
-          <DailyQuestModal
-            quests={gameState.dailyQuests}
-            streak={gameState.dailyStreak}
-            onClose={() => setShowQuestModal(false)}
-          />
-        )}
-      </>
-    );
-
-  if (gameState.screen === Screen.MARKET)
-    return (
-      <>
-        <MarketScreen
-          gameState={gameState}
-          onBuy={(item: Item) => {
-            if (gameState.currency >= item.price) {
-              setGameState((prev) => ({
-                ...prev,
-                currency: prev.currency - item.price,
-                inventory: {
-                  ...prev.inventory,
-                  [item.id]: (prev.inventory[item.id] || 0) + 1,
-                },
-              }));
-              addNotification('SATIN ALINDI', '#facc15');
-            } else {
-              addNotification('PARA YETERSİZ', '#dc2626');
-            }
-          }}
-          onNavigate={(s: Screen) =>
-            setGameState((prev) => ({ ...prev, screen: s }))
+      <HatchingScreen
+        onHatchTick={() => {
+          if (Math.random() > 0.8) {
+            setTimeout(handleHatch, 500);
           }
-        />
-        {pendingLevelUps > 0 && (
-          <LevelUpModal count={pendingLevelUps} onSelect={applyBuffChoice} />
-        )}
-        {showQuestModal && (
-          <DailyQuestModal
-            quests={gameState.dailyQuests}
-            streak={gameState.dailyStreak}
-            onClose={() => setShowQuestModal(false)}
-          />
-        )}
-      </>
+        }}
+      />
     );
+  }
 
-  if (gameState.screen === Screen.STATS)
+  if (gameState.screen === Screen.MARKET) {
     return (
-      <>
-        <StatsScreen
-          gameState={gameState}
-          onNavigate={(s: Screen) =>
-            setGameState((prev) => ({ ...prev, screen: s }))
-          }
-        />
-        {pendingLevelUps > 0 && (
-          <LevelUpModal count={pendingLevelUps} onSelect={applyBuffChoice} />
-        )}
-        {showQuestModal && (
-          <DailyQuestModal
-            quests={gameState.dailyQuests}
-            streak={gameState.dailyStreak}
-            onClose={() => setShowQuestModal(false)}
-          />
-        )}
-      </>
-    );
-
-  return (
-    <>
-      <MainGameScreen
+      <MarketScreen
         gameState={gameState}
-        onAction={handleAction}
-        onNavigate={(s: Screen) =>
+        onBuy={handleBuy}
+        onNavigate={(s) =>
           setGameState((prev) => ({ ...prev, screen: s }))
         }
-        onPet={() => {
-          setGameState((prev) => ({
-            ...prev,
-            dragon: {
-              ...prev.dragon,
-              happiness: Math.min(100, prev.dragon.happiness + 5),
-            },
-          }));
-          addNotification('SEVİLDİ <3', '#f472b6');
-        }}
-        notifications={notifications}
-        onMiniGameComplete={handleMiniGameComplete}
-        onRequestNotify={requestNotify}
-        hasNotifyPermission={hasNotifyPermission}
-        onOpenQuests={() => setShowQuestModal(true)}
       />
-      {pendingLevelUps > 0 && (
-        <LevelUpModal count={pendingLevelUps} onSelect={applyBuffChoice} />
-      )}
-      {showQuestModal && (
-        <DailyQuestModal
-          quests={gameState.dailyQuests}
-          streak={gameState.dailyStreak}
-          onClose={() => setShowQuestModal(false)}
-        />
-      )}
-    </>
+    );
+  }
+
+  if (gameState.screen === Screen.STATS) {
+    return (
+      <StatsScreen
+        gameState={gameState}
+        onNavigate={(s) =>
+          setGameState((prev) => ({ ...prev, screen: s }))
+        }
+      />
+    );
+  }
+
+  return (
+    <MainGameScreen
+      gameState={gameState}
+      onAction={handleAction}
+      onNavigate={(s) =>
+        setGameState((prev) => ({ ...prev, screen: s }))
+      }
+      onPet={() => {
+        setGameState((prev) => ({
+          ...prev,
+          dragon: {
+            ...prev.dragon,
+            happiness: Math.min(
+              100,
+              prev.dragon.happiness + 5,
+            ),
+          },
+        }));
+        addNotification('SEVİLDİ <3', '#f472b6');
+      }}
+      notifications={notifications}
+      onMiniGameComplete={handleMiniGameComplete}
+      onRequestNotify={requestNotify}
+      hasNotifyPermission={hasNotifyPermission}
+    />
   );
 }
