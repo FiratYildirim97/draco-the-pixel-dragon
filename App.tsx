@@ -1701,7 +1701,7 @@ const MainGameScreen = ({
                     ))}
                   </div>
                 </div>
-              )}
+             
             {activeMiniGame === 'FLAME_SHOW' && (
               <>
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -1719,6 +1719,7 @@ const MainGameScreen = ({
           </div>
         )}
       </div>
+      )}
 
       {/* Alt butonlar + bildirim + görev ikonu */}
       <div className="flex justify-between items-center mt-2 px-1 relative z-30 pointer-events-auto">
