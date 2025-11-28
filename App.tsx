@@ -801,7 +801,17 @@ const StartScreen = ({ onStart, onContinue, hasSave }: any) => (
   <div className="flex flex-col items-center justify-center h-full space-y-8 bg-pixel-dark text-white p-6 relative overflow-hidden">
     <div className="absolute inset-0 opacity-30 bg-[#7f1d1d] mix-blend-multiply" />
     <div className="relative z-10 text-center space-y-2 bg-pixel-dark/90 p-6 border-4 border-white shadow-pixel backdrop-blur-sm">
-      <h1 className="text-2xl sm:text-4xl leading-tight text-shadow-pixel tracking-tighter text-[#ef4444]">
+      <h1
+        className="
+          font-pixel
+          pixel-font
+          text-[12px] sm:text-[16px] md:text-[18px]
+          leading-relaxed
+          tracking-[0.35em]
+          text-[#ef4444]
+          text-shadow-pixel
+        "
+      >
         DRACO
         <br />
         THE PIXEL DRAGON
