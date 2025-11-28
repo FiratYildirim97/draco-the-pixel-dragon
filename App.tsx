@@ -1717,7 +1717,6 @@ const MainGameScreen = ({
               </div>
             )}
           </div>
-        )}
       </div>
       )}
 
