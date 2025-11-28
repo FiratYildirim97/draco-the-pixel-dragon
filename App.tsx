@@ -1,5 +1,14 @@
+// src/App.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
-import { GameState, Screen, DragonStage, Item, WeatherType } from './types';
+import {
+  GameState,
+  Screen,
+  DragonStage,
+  Item,
+  WeatherType,
+  DailyQuest,
+} from './types';
 import { ITEMS, INITIAL_GAME_STATE } from './constants';
 
 // --- Types for Visual Effects ---
@@ -24,7 +33,7 @@ const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
       [0, 0, 1, 2, 2, 2, 1, 0],
       [0, 0, 0, 1, 1, 1, 0, 0],
     ],
-    palette: ['transparent', '#b91c1c', '#fecaca', '#f87171'], // Kırmızı Yumurta
+    palette: ['transparent', '#b91c1c', '#fecaca', '#f87171'],
   },
   APPLE: {
     grid: [
@@ -37,7 +46,7 @@ const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
       [0, 0, 1, 1, 1, 1, 0, 0],
       [0, 0, 0, 0, 0, 0, 0, 0],
     ],
-    palette: ['transparent', '#ef4444', '#166534', '#fca5a5'], // Kırmızı Elma
+    palette: ['transparent', '#ef4444', '#166534', '#fca5a5'],
   },
   FISH: {
     grid: [
@@ -115,7 +124,7 @@ const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
       [1, 1, 1, 1, 1, 1, 1, 1],
       [0, 0, 0, 0, 0, 0, 0, 0],
     ],
-    palette: ['transparent', '#4338ca', '#facc15'], // Mavi şapka, sarı bant
+    palette: ['transparent', '#4338ca', '#facc15'],
   },
   GLASSES: {
     grid: [
@@ -128,7 +137,7 @@ const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
       [0, 0, 0, 0, 0, 0, 0, 0],
       [0, 0, 0, 0, 0, 0, 0, 0],
     ],
-    palette: ['transparent', '#000000', '#3b82f6'], // Siyah çerçeve, mavi cam
+    palette: ['transparent', '#000000', '#3b82f6'],
   },
   POTION: {
     grid: [
@@ -208,23 +217,22 @@ const ProceduralIcon = ({
 
 // --- Procedural Dragon Logic ---
 
-// Front-facing cute dragon view (16x16)
 const BASE_DRAGON = [
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], // Horn tips
-  [0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0], // Horns
-  [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0], // Head Top
-  [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0], // Forehead
-  [0, 0, 1, 1, 3, 3, 1, 1, 1, 3, 3, 1, 1, 0, 0, 0], // Eyes (Color 3) - Clear Face
-  [0, 0, 1, 1, 3, 3, 1, 1, 1, 3, 3, 1, 1, 0, 0, 0], // Eyes
-  [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0], // Cheeks
-  [0, 0, 0, 1, 1, 2, 1, 1, 1, 2, 1, 1, 0, 0, 0, 0], // Nostrils/Snout (Color 2 for contrast)
-  [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0], // Chin
-  [0, 0, 0, 0, 0, 1, 4, 4, 4, 1, 0, 0, 0, 0, 0, 0], // Chest (Color 4)
-  [0, 0, 0, 0, 1, 1, 4, 4, 4, 1, 1, 0, 0, 0, 0, 0], // Body
-  [0, 0, 0, 0, 1, 1, 4, 4, 4, 1, 1, 0, 0, 0, 0, 0], // Body
-  [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0], // Bottom
-  [0, 0, 0, 0, 2, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0], // Feet
+  [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+  [0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+  [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+  [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+  [0, 0, 1, 1, 3, 3, 1, 1, 1, 3, 3, 1, 1, 0, 0, 0],
+  [0, 0, 1, 1, 3, 3, 1, 1, 1, 3, 3, 1, 1, 0, 0, 0],
+  [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+  [0, 0, 0, 1, 1, 2, 1, 1, 1, 2, 1, 1, 0, 0, 0, 0],
+  [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 1, 4, 4, 4, 1, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 1, 1, 4, 4, 4, 1, 1, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 1, 1, 4, 4, 4, 1, 1, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 2, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ];
 
@@ -241,45 +249,41 @@ function getDragonColors(
   const isHappy = mode === 'happy' || mode === 'feeding';
   const isRainbow = mode === 'rainbow';
 
-  // --- RED DRAGON PALETTE ---
-  // Default (Adult/Teen)
-  let body = '#ef4444'; // Vivid Red
-  let shadow = '#991b1b'; // Dark Red
-  let eye = '#fbbf24'; // Amber Gold
-  let belly = '#fee2e2'; // Light Pinkish White
+  let body = '#ef4444';
+  let shadow = '#991b1b';
+  let eye = '#fbbf24';
+  let belly = '#fee2e2';
 
   if (age === 'baby') {
-    body = '#f87171'; // Softer Red
+    body = '#f87171';
     shadow = '#b91c1c';
     eye = '#fcd34d';
     belly = '#fef2f2';
   } else if (age === 'old') {
-    body = '#7f1d1d'; // Deep Aged Red
+    body = '#7f1d1d';
     shadow = '#450a0a';
     eye = '#d97706';
-    belly = '#9ca3af'; // Grey/White beard/belly for old age
+    belly = '#9ca3af';
   }
 
-  // Mood Modifications
   if (isRainbow) {
-    // Rainbow Cycling
     const hue = (t * 100) % 360;
     body = `hsl(${hue}, 80%, 60%)`;
     shadow = `hsl(${hue}, 90%, 30%)`;
     belly = `hsl(${(hue + 180) % 360}, 90%, 90%)`;
     eye = '#ffffff';
   } else if (isAngry) {
-    body = '#7f1d1d'; // Darker when angry
+    body = '#7f1d1d';
     shadow = '#000000';
-    eye = '#ff0000'; // Glowing red eyes
+    eye = '#ff0000';
     belly = '#7f1d1d';
   } else if (isSleepy) {
-    body = '#f87171'; // Pale when sleepy
-    eye = '#9ca3af'; // Closed/Dim
+    body = '#f87171';
+    eye = '#9ca3af';
     belly = '#f3f4f6';
   } else if (isExcited) {
-    body = '#fca5a5'; // Bright happy red
-    eye = '#fde047'; // Bright yellow
+    body = '#fca5a5';
+    eye = '#fde047';
   } else if (isHappy) {
     body = '#ef4444';
   }
@@ -313,16 +317,14 @@ const ProceduralDragon = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Configuration
     const baseSize = 16;
     const scale = 4;
-    const logicalSize = baseSize * scale; // 64
+    const logicalSize = baseSize * scale;
     const pixelSize = 1;
 
     canvas.width = logicalSize;
     canvas.height = logicalSize;
 
-    // Logical positions for drawing accessories
     const headLogicalX = 8 * scale;
     const headLogicalY = 5 * scale;
     const bodyCenterLogicalX = 8 * scale;
@@ -354,33 +356,25 @@ const ProceduralDragon = ({
         const gx = headLogicalX - 4 * scale;
         const gy = headLogicalY + 1 * scale + offsetY;
         ctx.fillStyle = '#000000';
-        // Left Frame
         ctx.fillRect(gx, gy, 3 * scale, 2 * scale);
-        // Right Frame
         ctx.fillRect(gx + 5 * scale, gy, 3 * scale, 2 * scale);
-        // Bridge
         ctx.fillRect(gx + 3 * scale, gy + 0.5 * scale, 2 * scale, 0.5 * scale);
-        // Glass glint
         ctx.fillStyle = '#60a5fa';
         ctx.fillRect(gx + scale, gy + 0.5 * scale, scale, scale);
         ctx.fillRect(gx + 6 * scale, gy + 0.5 * scale, scale, scale);
       } else if (type === 'crown') {
-        // Basit bir taç
         const cy = headLogicalY - 3 * scale + offsetY;
         const cx = headLogicalX - 4 * scale;
         ctx.fillStyle = '#facc15';
         ctx.fillRect(cx, cy + 2 * scale, 8 * scale, scale);
-        // 3 sivri uç
         ctx.fillRect(cx + 1 * scale, cy, scale, 2 * scale);
         ctx.fillRect(cx + 3 * scale, cy - scale, scale, 3 * scale);
         ctx.fillRect(cx + 5 * scale, cy, scale, 2 * scale);
       } else if (type === 'scarf') {
-        // Boyun etrafında atkı
         const sy = headLogicalY + 4 * scale + offsetY;
         const sx = headLogicalX - 4 * scale;
         ctx.fillStyle = '#b91c1c';
         ctx.fillRect(sx, sy, 8 * scale, 2 * scale);
-        // Sarkan parça
         ctx.fillRect(sx + 2 * scale, sy + 2 * scale, 2 * scale, 3 * scale);
       }
     };
@@ -424,7 +418,6 @@ const ProceduralDragon = ({
         }
       }
 
-      // Accessory
       if (accessory) {
         drawAccessory(accessory, offsetY);
       }
@@ -510,7 +503,6 @@ const ProceduralDragon = ({
       }
 
       const t = timestamp / 1000;
-
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawDragonBody(t);
       drawWings(t);
@@ -638,7 +630,8 @@ const WeatherOverlay = ({ weather }: { weather: WeatherType }) => {
   );
 };
 
-// --- Inventory Modal with Tabs ---
+// --- Inventory Modal ---
+
 const InventoryModal = ({
   inventory,
   onSelect,
@@ -721,6 +714,106 @@ const InventoryModal = ({
   );
 };
 
+// --- Level Up Modal ---
+
+type BuffChoice = 'HAPPINESS' | 'HYGIENE' | 'GOLD';
+
+const LevelUpModal = ({
+  count,
+  onSelect,
+}: {
+  count: number;
+  onSelect: (buff: BuffChoice) => void;
+}) => (
+  <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div className="bg-lcd-bg border-4 border-lcd-fg p-4 max-w-xs w-full shadow-pixel text-center">
+      <h3 className="text-sm font-pixel mb-2">SEVİYE ATLADIN!</h3>
+      <p className="text-xs mb-3">
+        Pasif güç seç ({count} hak{count > 1 ? 'k' : ''}):
+      </p>
+      <div className="flex flex-col gap-2 text-[11px]">
+        <button
+          onClick={() => onSelect('HAPPINESS')}
+          className="border-2 border-lcd-fg px-2 py-1 hover:bg-black/10"
+        >
+          😊 Mutluluk daha yavaş azalsın
+        </button>
+        <button
+          onClick={() => onSelect('HYGIENE')}
+          className="border-2 border-lcd-fg px-2 py-1 hover:bg-black/10"
+        >
+          🧼 Temizlik daha yavaş azalsın
+        </button>
+        <button
+          onClick={() => onSelect('GOLD')}
+          className="border-2 border-lcd-fg px-2 py-1 hover:bg-black/10"
+        >
+          💰 Mini oyun altını +%20
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// --- Daily Quest Modal ---
+
+const DailyQuestModal = ({
+  quests,
+  streak,
+  onClose,
+}: {
+  quests: DailyQuest[];
+  streak: number;
+  onClose: () => void;
+}) => (
+  <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div className="bg-lcd-bg border-4 border-lcd-fg p-3 max-w-xs w-full shadow-pixel">
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-sm font-pixel">GÜNLÜK GÖREVLER</h3>
+        <button
+          onClick={onClose}
+          className="text-xs px-2 py-1 border border-lcd-fg hover:bg-black/10"
+        >
+          KAPAT
+        </button>
+      </div>
+      <div className="text-[11px] mb-2">
+        Streak: <b>{streak}</b> gün üst üste
+      </div>
+      <div className="flex flex-col gap-2 text-[11px] max-h-60 overflow-y-auto">
+        {quests.length === 0 && (
+          <div className="text-xs opacity-60 text-center py-4">
+            Bugün için görev yok.
+          </div>
+        )}
+        {quests.map((q) => (
+          <div
+            key={q.id}
+            className={`border-2 border-lcd-fg p-2 ${
+              q.completed ? 'bg-green-200/60' : 'bg-lcd-bg'
+            }`}
+          >
+            <div className="flex justify-between mb-1">
+              <span>{q.description}</span>
+              <span>
+                {q.progress}/{q.target}
+              </span>
+            </div>
+            <div className="text-[10px] opacity-70">
+              Ödül: {q.rewardGold} altın, {q.rewardXp} XP
+            </div>
+            {q.completed && (
+              <div className="text-[10px] text-green-700 mt-1 font-bold">
+                ✓ Tamamlandı
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 // --- Character Component ---
 
 const DragonCharacter = ({
@@ -801,17 +894,7 @@ const StartScreen = ({ onStart, onContinue, hasSave }: any) => (
   <div className="flex flex-col items-center justify-center h-full space-y-8 bg-pixel-dark text-white p-6 relative overflow-hidden">
     <div className="absolute inset-0 opacity-30 bg-[#7f1d1d] mix-blend-multiply" />
     <div className="relative z-10 text-center space-y-2 bg-pixel-dark/90 p-6 border-4 border-white shadow-pixel backdrop-blur-sm">
-      <h1
-        className="
-          font-pixel
-          pixel-font
-          text-[12px] sm:text-[16px] md:text-[18px]
-          leading-relaxed
-          tracking-[0.35em]
-          text-[#ef4444]
-          text-shadow-pixel
-        "
-      >
+      <h1 className="text-2xl sm:text-4xl leading-tight text-shadow-pixel tracking-tighter text-[#ef4444]">
         DRACO
         <br />
         THE PIXEL DRAGON
@@ -1041,7 +1124,7 @@ const StatsScreen = ({
   );
 };
 
-// --- Main Game Screen with 5 Mini Games ---
+// --- Main Game Screen ---
 
 const MainGameScreen = ({
   gameState,
@@ -1052,6 +1135,7 @@ const MainGameScreen = ({
   onMiniGameComplete,
   onRequestNotify,
   hasNotifyPermission,
+  onOpenQuests,
 }: any) => {
   type MiniGameType =
     | 'NONE'
@@ -1069,11 +1153,9 @@ const MainGameScreen = ({
   const [actionAnimation, setActionAnimation] = useState<string | null>(null);
   const [isMoving, setIsMoving] = useState(false);
 
-  // Fetch top mekaniği
   const [fetchMode, setFetchMode] = useState(false);
   const [ballPos, setBallPos] = useState({ x: -100, y: -100 });
 
-  // Mini oyun state’leri
   const [miniGameMenuOpen, setMiniGameMenuOpen] = useState(false);
   const [activeMiniGame, setActiveMiniGame] = useState<MiniGameType>('NONE');
   const [gameTime, setGameTime] = useState(0);
@@ -1085,7 +1167,6 @@ const MainGameScreen = ({
   const miniGameInterval = useRef<number | null>(null);
   const gameScoreRef = useRef(0);
 
-  // RPS / MATH / TAP_DRACO için ek state
   const [rpsResult, setRpsResult] = useState<string | null>(null);
   const [mathQ, setMathQ] = useState<{
     text: string;
@@ -1571,7 +1652,7 @@ const MainGameScreen = ({
         )}
       </div>
 
-      {/* Alt butonlar */}
+      {/* Alt butonlar + bildirim + görev ikonu */}
       <div className="flex justify-between items-center mt-2 px-1 relative z-30 pointer-events-auto">
         <div className="flex gap-2">
           <button
@@ -1595,21 +1676,32 @@ const MainGameScreen = ({
             <span className="material-symbols-outlined">storefront</span>
           </button>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRequestNotify();
-          }}
-          className={`hover:bg-black/10 p-1 rounded ${
-            hasNotifyPermission
-              ? 'text-black opacity-50'
-              : 'text-red-600 animate-bounce'
-          }`}
-        >
-          <span className="material-symbols-outlined">
-            {hasNotifyPermission ? 'notifications_active' : 'notifications_off'}
-          </span>
-        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenQuests();
+            }}
+            className="hover:bg-black/10 p-1 rounded text-amber-700"
+          >
+            <span className="material-symbols-outlined">flag</span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRequestNotify();
+            }}
+            className={`hover:bg-black/10 p-1 rounded ${
+              hasNotifyPermission
+                ? 'text-black opacity-50'
+                : 'text-red-600 animate-bounce'
+            }`}
+          >
+            <span className="material-symbols-outlined">
+              {hasNotifyPermission ? 'notifications_active' : 'notifications_off'}
+            </span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-2 mt-2 relative z-30 pointer-events-auto">
@@ -1691,11 +1783,55 @@ export default function App() {
   const tickRef = useRef<number | null>(null);
   const lastNotificationTime = useRef<number>(0);
 
+  const [pendingLevelUps, setPendingLevelUps] = useState(0);
+  const [showQuestModal, setShowQuestModal] = useState(false);
+
   useEffect(() => {
     const saved = localStorage.getItem('dragon_save');
     if (saved) setHasSave(true);
-    if ('Notification' in window && Notification.permission === 'granted')
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted')
       setHasNotifyPermission(true);
+  }, []);
+
+  // Günlük görevleri başlat (şimdilik tek görev: mini oyun oyna)
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    setGameState((prev) => {
+      if (prev.lastQuestDate === today && prev.dailyQuests.length > 0) return prev;
+
+      const newQuests: DailyQuest[] = [
+        {
+          id: 'play_games',
+          description: 'Mini oyun oyna: 3 kez',
+          target: 3,
+          progress: 0,
+          rewardGold: 80,
+          rewardXp: 30,
+          completed: false,
+        },
+      ];
+
+      let newStreak = prev.dailyStreak || 0;
+      if (!prev.lastQuestDate) {
+        newStreak = 1;
+      } else {
+        const last = new Date(prev.lastQuestDate);
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (last.toDateString() === yesterday.toDateString()) {
+          newStreak = newStreak + 1;
+        } else if (last.toDateString() !== new Date(today).toDateString()) {
+          newStreak = 1;
+        }
+      }
+
+      return {
+        ...prev,
+        dailyQuests: newQuests,
+        lastQuestDate: today,
+        dailyStreak: newStreak,
+      };
+    });
   }, []);
 
   const addNotification = (text: string, color: string = '#21221d') => {
@@ -1717,7 +1853,7 @@ export default function App() {
   };
 
   const requestNotify = async () => {
-    if (!('Notification' in window)) return;
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
       setHasNotifyPermission(true);
@@ -1726,6 +1862,7 @@ export default function App() {
   };
 
   const trySendNotification = (title: string, body: string) => {
+    if (typeof document === 'undefined' || typeof Notification === 'undefined') return;
     const now = Date.now();
     if (
       hasNotifyPermission &&
@@ -1753,7 +1890,10 @@ export default function App() {
           ? Math.min(100, prev.dragon.energy + 1.5)
           : Math.max(0, prev.dragon.energy - 0.1);
 
-        let newHygiene = Math.max(0, prev.dragon.hygiene - 0.05);
+        let newHygiene = Math.max(
+          0,
+          prev.dragon.hygiene - 0.05 * prev.buffs.hygieneDecayMultiplier,
+        );
         let newPoops = prev.dragon.poops;
         if (
           newHygiene < 60 &&
@@ -1767,6 +1907,7 @@ export default function App() {
         if (newHygiene < 40) happinessDecay += 0.2;
 
         if (accessory === 'glasses') happinessDecay *= 0.7;
+        happinessDecay *= prev.buffs.happinessDecayMultiplier;
 
         const newHappiness = Math.max(
           0,
@@ -1783,13 +1924,20 @@ export default function App() {
 
         if (accessory === 'hat') newXp += 0.05;
 
-        if (newXp >= newMaxXp) {
+        let levelUps = 0;
+        while (newXp >= newMaxXp) {
           newXp -= newMaxXp;
           newEvolutionStage++;
           newMaxXp = Math.floor(newMaxXp * 1.5);
+          levelUps++;
           if (newEvolutionStage === 3) newStage = DragonStage.TEEN;
           if (newEvolutionStage === 5) newStage = DragonStage.ADULT;
           if (newEvolutionStage === 8) newStage = DragonStage.ELDER;
+        }
+
+        if (levelUps > 0) {
+          setPendingLevelUps((c) => c + levelUps);
+          addNotification('SEVİYE ATLADIN!', '#fbbf24');
         }
 
         let newWeather = prev.weather;
@@ -1838,6 +1986,7 @@ export default function App() {
       const d = { ...prev.dragon };
       let inv = { ...prev.inventory };
       let currency = prev.currency;
+      let dailyQuests = prev.dailyQuests;
 
       if (type === 'USE_ITEM') {
         const item = action.item as Item;
@@ -1899,7 +2048,7 @@ export default function App() {
         addNotification(action.text, action.color);
       }
 
-      return { ...prev, dragon: d, inventory: inv, currency };
+      return { ...prev, dragon: d, inventory: inv, currency, dailyQuests };
     });
   };
 
@@ -1907,20 +2056,56 @@ export default function App() {
     result: 'WIN' | 'LOSE' | 'DRAW',
     gameType: string,
   ) => {
-    setGameState((prev) => ({
-      ...prev,
-      currency: prev.currency + (result === 'WIN' ? 50 : 10),
-      dragon: {
-        ...prev.dragon,
-        happiness: Math.min(
-          100,
-          prev.dragon.happiness + (result === 'WIN' ? 20 : 5),
-        ),
-        energy: Math.max(0, prev.dragon.energy - 10),
-        xp: prev.dragon.xp + 15,
-      },
-    }));
-    addNotification(result === 'WIN' ? 'KAZANDIN!' : 'BERABERE', '#16a34a');
+    setGameState((prev) => {
+      const dragon = { ...prev.dragon };
+      let goldGainBase = result === 'WIN' ? 50 : 10;
+      goldGainBase = Math.round(
+        goldGainBase * prev.buffs.miniGameGoldMultiplier,
+      );
+
+      // Stat antrenmanı
+      if (result === 'WIN') {
+        if (gameType === 'MATH') dragon.stats.int += 1;
+        if (gameType === 'CATCH_APPLE' || gameType === 'CATCH_STAR')
+          dragon.stats.agi += 1;
+        if (gameType === 'TAP_DRACO') dragon.stats.str += 1;
+      }
+
+      // Günlük görev: play_games
+      let extraGoldFromQuests = 0;
+      let extraXpFromQuests = 0;
+      const updatedQuests = prev.dailyQuests.map((q) => {
+        if (q.id === 'play_games' && !q.completed) {
+          const newProg = Math.min(q.target, q.progress + 1);
+          const completed = newProg >= q.target;
+          if (completed) {
+            extraGoldFromQuests += q.rewardGold;
+            extraXpFromQuests += q.rewardXp;
+          }
+          return { ...q, progress: newProg, completed };
+        }
+        return q;
+      });
+
+      const happinessDelta = result === 'WIN' ? 20 : 5;
+
+      return {
+        ...prev,
+        currency: prev.currency + goldGainBase + extraGoldFromQuests,
+        dailyQuests: updatedQuests,
+        dragon: {
+          ...dragon,
+          happiness: Math.min(100, dragon.happiness + happinessDelta),
+          energy: Math.max(0, dragon.energy - 10),
+          xp: dragon.xp + 15 + extraXpFromQuests,
+        },
+      };
+    });
+
+    addNotification(
+      result === 'WIN' ? 'ANTRENMAN BAŞARILI!' : 'FENA DEĞIL :)',
+      '#22c55e',
+    );
   };
 
   const handleHatch = () => {
@@ -1930,6 +2115,23 @@ export default function App() {
     }));
     addNotification('DOĞDU!', '#ef4444');
   };
+
+  const applyBuffChoice = (buff: BuffChoice) => {
+    setGameState((prev) => {
+      const buffs = { ...prev.buffs };
+      if (buff === 'HAPPINESS')
+        buffs.happinessDecayMultiplier = buffs.happinessDecayMultiplier * 0.85;
+      if (buff === 'HYGIENE')
+        buffs.hygieneDecayMultiplier = buffs.hygieneDecayMultiplier * 0.85;
+      if (buff === 'GOLD')
+        buffs.miniGameGoldMultiplier = buffs.miniGameGoldMultiplier * 1.2;
+      return { ...prev, buffs };
+    });
+    setPendingLevelUps((c) => Math.max(0, c - 1));
+    addNotification('YENİ PASİF ALDIN', '#facc15');
+  };
+
+  // --- Render ---
 
   if (gameState.screen === Screen.START)
     return (
@@ -1947,70 +2149,119 @@ export default function App() {
 
   if (gameState.dragon.stage === DragonStage.EGG)
     return (
-      <HatchingScreen
-        gameState={gameState}
-        onHatchTick={() => {
-          if (Math.random() > 0.8) setTimeout(handleHatch, 500);
-        }}
-      />
+      <>
+        <HatchingScreen
+          gameState={gameState}
+          onHatchTick={() => {
+            if (Math.random() > 0.8) setTimeout(handleHatch, 500);
+          }}
+        />
+        {pendingLevelUps > 0 && (
+          <LevelUpModal count={pendingLevelUps} onSelect={applyBuffChoice} />
+        )}
+        {showQuestModal && (
+          <DailyQuestModal
+            quests={gameState.dailyQuests}
+            streak={gameState.dailyStreak}
+            onClose={() => setShowQuestModal(false)}
+          />
+        )}
+      </>
     );
 
   if (gameState.screen === Screen.MARKET)
     return (
-      <MarketScreen
-        gameState={gameState}
-        onBuy={(item: Item) => {
-          if (gameState.currency >= item.price) {
-            setGameState((prev) => ({
-              ...prev,
-              currency: prev.currency - item.price,
-              inventory: {
-                ...prev.inventory,
-                [item.id]: (prev.inventory[item.id] || 0) + 1,
-              },
-            }));
-            addNotification('SATIN ALINDI', '#facc15');
-          } else {
-            addNotification('PARA YETERSİZ', '#dc2626');
+      <>
+        <MarketScreen
+          gameState={gameState}
+          onBuy={(item: Item) => {
+            if (gameState.currency >= item.price) {
+              setGameState((prev) => ({
+                ...prev,
+                currency: prev.currency - item.price,
+                inventory: {
+                  ...prev.inventory,
+                  [item.id]: (prev.inventory[item.id] || 0) + 1,
+                },
+              }));
+              addNotification('SATIN ALINDI', '#facc15');
+            } else {
+              addNotification('PARA YETERSİZ', '#dc2626');
+            }
+          }}
+          onNavigate={(s: Screen) =>
+            setGameState((prev) => ({ ...prev, screen: s }))
           }
-        }}
-        onNavigate={(s: Screen) =>
-          setGameState((prev) => ({ ...prev, screen: s }))
-        }
-      />
+        />
+        {pendingLevelUps > 0 && (
+          <LevelUpModal count={pendingLevelUps} onSelect={applyBuffChoice} />
+        )}
+        {showQuestModal && (
+          <DailyQuestModal
+            quests={gameState.dailyQuests}
+            streak={gameState.dailyStreak}
+            onClose={() => setShowQuestModal(false)}
+          />
+        )}
+      </>
     );
 
   if (gameState.screen === Screen.STATS)
     return (
-      <StatsScreen
-        gameState={gameState}
-        onNavigate={(s: Screen) =>
-          setGameState((prev) => ({ ...prev, screen: s }))
-        }
-      />
+      <>
+        <StatsScreen
+          gameState={gameState}
+          onNavigate={(s: Screen) =>
+            setGameState((prev) => ({ ...prev, screen: s }))
+          }
+        />
+        {pendingLevelUps > 0 && (
+          <LevelUpModal count={pendingLevelUps} onSelect={applyBuffChoice} />
+        )}
+        {showQuestModal && (
+          <DailyQuestModal
+            quests={gameState.dailyQuests}
+            streak={gameState.dailyStreak}
+            onClose={() => setShowQuestModal(false)}
+          />
+        )}
+      </>
     );
 
   return (
-    <MainGameScreen
-      gameState={gameState}
-      onAction={handleAction}
-      onNavigate={(s: Screen) =>
-        setGameState((prev) => ({ ...prev, screen: s }))
-      }
-      onPet={() => {
-        setGameState((prev) => ({
-          ...prev,
-          dragon: {
-            ...prev.dragon,
-            happiness: Math.min(100, prev.dragon.happiness + 5),
-          },
-        }));
-        addNotification('SEVİLDİ <3', '#f472b6');
-      }}
-      notifications={notifications}
-      onMiniGameComplete={handleMiniGameComplete}
-      onRequestNotify={requestNotify}
-      hasNotifyPermission={hasNotifyPermission}
-    />
+    <>
+      <MainGameScreen
+        gameState={gameState}
+        onAction={handleAction}
+        onNavigate={(s: Screen) =>
+          setGameState((prev) => ({ ...prev, screen: s }))
+        }
+        onPet={() => {
+          setGameState((prev) => ({
+            ...prev,
+            dragon: {
+              ...prev.dragon,
+              happiness: Math.min(100, prev.dragon.happiness + 5),
+            },
+          }));
+          addNotification('SEVİLDİ <3', '#f472b6');
+        }}
+        notifications={notifications}
+        onMiniGameComplete={handleMiniGameComplete}
+        onRequestNotify={requestNotify}
+        hasNotifyPermission={hasNotifyPermission}
+        onOpenQuests={() => setShowQuestModal(true)}
+      />
+      {pendingLevelUps > 0 && (
+        <LevelUpModal count={pendingLevelUps} onSelect={applyBuffChoice} />
+      )}
+      {showQuestModal && (
+        <DailyQuestModal
+          quests={gameState.dailyQuests}
+          streak={gameState.dailyStreak}
+          onClose={() => setShowQuestModal(false)}
+        />
+      )}
+    </>
   );
 }
