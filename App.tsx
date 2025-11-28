@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GameState, Screen, DragonStage, Item, WeatherType } from './types';
 import { ITEMS, INITIAL_GAME_STATE } from './constants';
@@ -680,7 +679,9 @@ const StartScreen = ({ onStart, onContinue, hasSave }: any) => (
   <div className="flex flex-col items-center justify-center h-full space-y-8 bg-pixel-dark text-white p-6 relative overflow-hidden">
     <div className="absolute inset-0 opacity-30 bg-[#7f1d1d] mix-blend-multiply"></div>
     <div className="relative z-10 text-center space-y-2 bg-pixel-dark/90 p-6 border-4 border-white shadow-pixel backdrop-blur-sm">
-      <h1 className="text-2xl sm:text-4xl leading-tight text-shadow-pixel tracking-tighter text-[#ef4444]">EJDERHA<br/>MİRASI</h1>
+      <h1 className="text-2xl sm:text-4xl leading-tight text-shadow-pixel tracking-tighter text-[#ef4444]">
+        Draco the<br />Pixel Dragon
+      </h1>
     </div>
     <div className="relative z-10 flex flex-col w-full max-w-xs gap-4">
       <PixelButton onClick={onStart} className="w-full" variant="primary">YENİ OYUN</PixelButton>
@@ -877,7 +878,7 @@ const StatsScreen = ({ gameState, onNavigate }: { gameState: GameState; onNaviga
   else if (dragon.stage === DragonStage.ADULT || dragon.stage === DragonStage.TEEN) visualStage = 'adult';
   return (
     <div className="h-full bg-[#d4b4b4] text-black font-retro text-xl p-4 flex flex-col border-8 border-black relative">
-       <div className="flex justify-between items-center border-b-4 border-black pb-2 mb-4"><div className="flex items-center gap-2"><span className="material-symbols-outlined">pets</span><span>{dragon.name}</span></div><div className="flex items-center gap-2 text-lg"><span>LVL {dragon.evolutionStage}</span><span className="material-symbols-outlined">signal_cellular_alt</span></div></div>
+       <div className="flex justify_between items-center border-b-4 border-black pb-2 mb-4"><div className="flex items-center gap-2"><span className="material-symbols-outlined">pets</span><span>{dragon.name}</span></div><div className="flex items-center gap-2 text-lg"><span>LVL {dragon.evolutionStage}</span><span className="material-symbols-outlined">signal_cellular_alt</span></div></div>
        <div className="flex flex-col items-center mb-6">
           <div className="w-32 h-32 border-4 border-black bg-[#8a9980] p-2"><ProceduralDragon stage={visualStage} mode="idle" accessory={dragon.equippedAccessory} className="mix-blend-multiply" /></div>
           <div className="w-full max-w-[200px] border-4 border-black mt-2 p-[2px] bg-black/10 relative h-8"><div className="h-full bg-black" style={{ width: `${Math.min(100, (dragon.xp / dragon.maxXp) * 100)}%` }}></div><span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-[#9EAE94] mix-blend-difference">XP: {Math.floor(dragon.xp)}/{dragon.maxXp}</span></div>
