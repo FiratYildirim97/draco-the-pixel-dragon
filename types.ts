@@ -1,10 +1,11 @@
+// src/types.ts
 
 export enum Screen {
   START = 'START',
   HATCH = 'HATCH',
   MAIN = 'MAIN',
+  MARKET = 'MARKET',
   STATS = 'STATS',
-  MARKET = 'MARKET'
 }
 
 export enum DragonStage {
@@ -12,10 +13,28 @@ export enum DragonStage {
   BABY = 'BABY',
   TEEN = 'TEEN',
   ADULT = 'ADULT',
-  ELDER = 'ELDER'
+  ELDER = 'ELDER',
 }
 
 export type WeatherType = 'SUNNY' | 'RAIN';
+
+export type ItemType = 'FOOD' | 'TOY' | 'ACCESSORY';
+
+export interface ItemEffect {
+  hunger?: number;
+  happiness?: number;
+  energy?: number;
+  health?: number;
+}
+
+export interface Item {
+  id: string;
+  name: string;
+  type: ItemType;
+  price: number;
+  image: string; // PIXEL_ART key: APPLE, FISH, STEAK, etc.
+  effect: ItemEffect;
+}
 
 export interface Stats {
   str: number;
@@ -24,44 +43,56 @@ export interface Stats {
   agi: number;
 }
 
-export interface Item {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  effect: {
-    hunger?: number;
-    happiness?: number;
-    xp?: number;
-    health?: number;
-    energy?: number;
-  };
-  type: 'FOOD' | 'TOY' | 'ACCESSORY' | 'POTION';
-}
-
-export interface DragonState {
+export interface Dragon {
   name: string;
   stage: DragonStage;
-  hunger: number; // 0-100 (100 is full)
-  happiness: number; // 0-100
-  hygiene: number; // 0-100
-  energy: number; // 0-100
-  health: number; // 0-100
+  evolutionStage: number;
+  age: number;
+
+  hunger: number;
+  happiness: number;
+  hygiene: number;
+  energy: number;
+  health: number;
+
   xp: number;
   maxXp: number;
-  stats: Stats;
-  evolutionStage: number; // 1-5
-  age: number; // in days/ticks
+
   isSleeping: boolean;
-  poops: number; // number of poops on screen
-  equippedAccessory?: string | null; // ID of the equipped item
+  poops: number;
+
+  equippedAccessory: string | null; // 'hat', 'glasses', vb.
+  stats: Stats;
+}
+
+export interface PermanentBuffs {
+  happinessDecayMultiplier: number; // <1 ise daha yavaş azalır
+  hygieneDecayMultiplier: number;
+  miniGameGoldMultiplier: number;
+}
+
+export interface DailyQuest {
+  id: string;
+  description: string;
+  target: number;
+  progress: number;
+  rewardGold: number;
+  rewardXp: number;
+  completed: boolean;
 }
 
 export interface GameState {
   screen: Screen;
-  dragon: DragonState;
+  dragon: Dragon;
+  inventory: Record<string, number>;
   currency: number;
-  inventory: Record<string, number>; // Item ID -> Count
-  lastSaveTime: number;
   weather: WeatherType;
+
+  // Uzun vadeli progression
+  buffs: PermanentBuffs;
+
+  // Günlük görevler
+  dailyQuests: DailyQuest[];
+  lastQuestDate: string | null;
+  dailyStreak: number;
 }
