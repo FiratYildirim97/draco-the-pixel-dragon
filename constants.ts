@@ -1,123 +1,228 @@
+// src/constants.ts
+import { GameState, Screen, DragonStage, Item, WeatherType } from './types';
 
-import { Item, DragonStage, GameState, Screen } from './types';
+// --- Mağazadaki tüm eşyalar ---
+// Item tipi şu alanları kullanıyor:
+// id: string
+// name: string
+// type: 'FOOD' | 'TOY' | 'ACCESSORY'
+// price: number
+// effect: { hunger?: number; happiness?: number; energy?: number; health?: number }
+// image: string  -> PIXEL_ART içindeki anahtarlarla eşleşiyor (APP.tsx’te tanımlı)
 
-// Artık harici URL kullanmıyoruz, type ID'leri kullanıyoruz.
-export const IMAGES = {
-  TITLE_BG: 'BG', // Kod içinde halledilecek
-  EGG: 'EGG',
-};
-
-// Market ve envanterde kullanılacak item listesi
 export const ITEMS: Item[] = [
-  // YİYECEKLER
+  // --- YİYECEKLER (FOOD) ---
   {
-    id: 'apple',
-    name: 'Kırmızı Elma',
-    price: 5,
-    image: 'APPLE',
-    effect: { hunger: 20, happiness: 2 },
+    id: 'apple_snack',
+    name: 'Elma Atıştırmalığı',
     type: 'FOOD',
-  },
-  {
-    id: 'fish',
-    name: 'Izgara Balık',
     price: 10,
+    image: 'APPLE',
+    effect: {
+      hunger: 15,
+      happiness: 5,
+      health: 0,
+      energy: 0,
+    },
+  },
+  {
+    id: 'fish_snack',
+    name: 'Balık Şöleni',
+    type: 'FOOD',
+    price: 18,
     image: 'FISH',
-    effect: { hunger: 30, happiness: 3 },
-    type: 'FOOD',
+    effect: {
+      hunger: 20,
+      happiness: 6,
+      health: 2,
+      energy: 3,
+    },
   },
   {
-    id: 'steak',
-    name: 'Sulu Biftek',
-    price: 15,
+    id: 'steak_feast',
+    name: 'Biftek Ziyafeti',
+    type: 'FOOD',
+    price: 28,
     image: 'STEAK',
-    effect: { hunger: 40, happiness: 4, health: 5 },
-    type: 'FOOD',
+    effect: {
+      hunger: 30,
+      happiness: 8,
+      health: 5,
+      energy: 5,
+    },
   },
   {
-    id: 'salad',
-    name: 'Vitamin Salata',
-    price: 8,
-    image: 'SALAD',
-    effect: { hunger: 15, happiness: 5, health: 3 },
+    id: 'veggie_salad',
+    name: 'Sebze Salatası',
     type: 'FOOD',
+    price: 16,
+    image: 'SALAD',
+    effect: {
+      hunger: 18,
+      happiness: 4,
+      health: 8,
+      energy: 2,
+    },
   },
-  // OYUNCAKLAR
+
+  // Potions – kodda item.id.includes('potion') kontrolü var:
+  {
+    id: 'small_potion',
+    name: 'Küçük İksir',
+    type: 'FOOD',
+    price: 35,
+    image: 'POTION',
+    effect: {
+      hunger: 10,
+      happiness: 15,
+      health: 20,
+      energy: 10,
+    },
+  },
+  {
+    id: 'rainbow_potion',
+    name: 'Gökkuşağı İksiri',
+    type: 'FOOD',
+    price: 60,
+    image: 'POTION',
+    effect: {
+      hunger: 15,
+      happiness: 30,
+      health: 30,
+      energy: 20,
+    },
+  },
+
+  // --- OYUNCAKLAR (TOY) ---
   {
     id: 'ball',
     name: 'Kırmızı Top',
-    price: 25,
-    image: 'BALL',
-    effect: { happiness: 15, energy: -5 },
     type: 'TOY',
+    price: 22,
+    image: 'BALL',
+    effect: {
+      happiness: 15,
+      hunger: 0,
+      energy: 0, // gerçek enerji düşüşü App içinde PLAY/FETCH’te ayarlanıyor
+      health: 0,
+    },
   },
   {
-    id: 'plush',
-    name: 'Ayıcık',
-    price: 40,
-    image: 'PLUSH',
-    effect: { happiness: 25 },
+    id: 'plushie',
+    name: 'Ejderha Peluş',
     type: 'TOY',
+    price: 26,
+    image: 'PLUSH',
+    effect: {
+      happiness: 20,
+      hunger: 0,
+      energy: -2,
+      health: 0,
+    },
   },
-  // AKSESUARLAR
+
+  // --- AKSESUARLAR (ACCESSORY) ---
+  // ÖNEMLİ: App.tsx içinde bazı aksesuar id’leri özel olarak kontrol ediliyor:
+  // - 'hat'  -> pasif XP bonusu
+  // - 'glasses' -> mutluluk decay yavaşlatma
+  // Ayrıca drawAccessory içinde 'hat', 'glasses', 'crown', 'scarf' destekleniyor.
   {
     id: 'hat',
     name: 'Büyücü Şapkası',
-    price: 100,
-    image: 'HAT',
-    effect: { happiness: 50 },
     type: 'ACCESSORY',
+    price: 40,
+    image: 'HAT',
+    effect: {
+      happiness: 5,
+      hunger: 0,
+      energy: 0,
+      health: 0,
+    },
   },
   {
     id: 'glasses',
-    name: 'Havalı Gözlük',
-    price: 75,
-    image: 'GLASSES',
-    effect: { happiness: 30 },
+    name: 'Zeki Gözlük',
     type: 'ACCESSORY',
+    price: 40,
+    image: 'GLASSES',
+    effect: {
+      happiness: 4,
+      hunger: 0,
+      energy: 0,
+      health: 0,
+    },
   },
-  // İKSİRLER (YENİ)
   {
-    id: 'potion_rainbow',
-    name: 'Gökkuşağı İksiri',
-    price: 150,
-    image: 'POTION',
-    effect: { hunger: 100, energy: 100, happiness: 100 },
-    type: 'FOOD', // Food kategorisinde görünsün ki yenilebilsin
-  }
+    id: 'crown',
+    name: 'Kraliyet Tacı',
+    type: 'ACCESSORY',
+    price: 70,
+    image: 'STAR', // Taç için yıldız sprite’ını kullanıyoruz
+    effect: {
+      happiness: 10,
+      hunger: 0,
+      energy: 0,
+      health: 5,
+    },
+  },
+  {
+    id: 'scarf',
+    name: 'Kırmızı Atkı',
+    type: 'ACCESSORY',
+    price: 32,
+    image: 'PLUSH',
+    effect: {
+      happiness: 6,
+      hunger: 0,
+      energy: 0,
+      health: 3,
+    },
+  },
 ];
 
-// Oyunun başlangıç durumu
+// --- BAŞLANGIÇ OYUN DURUMU ---
+
 export const INITIAL_GAME_STATE: GameState = {
   screen: Screen.START,
+  weather: 'SUNNY' as WeatherType,
+  currency: 50,
+
+  // Çanta: başlangıçta birkaç yiyecek ve bir top
+  inventory: {
+    apple_snack: 2,
+    steak_feast: 1,
+    ball: 1,
+  },
+
   dragon: {
-    name: '',
-    stage: DragonStage.EGG,
-    hunger: 60,
-    happiness: 50,
-    hygiene: 50,
-    energy: 50,
+    // App.tsx başlangıçta ismi DRACO’ya override ediyor
+    name: 'YUMURTA',
+
+    // Temel ihtiyaç barları
+    hunger: 80,
+    happiness: 70,
+    hygiene: 90,
+    energy: 80,
     health: 100,
+
+    // Level / evrim sistemi
     xp: 0,
-    maxXp: 100,
+    maxXp: 50,
+    evolutionStage: 1,
+    stage: DragonStage.EGG, // Yumurtadan başlıyoruz
+
+    // Diğer durumlar
+    age: 0,
+    poops: 0,
+    isSleeping: false,
+    equippedAccessory: null,
+
+    // Statlar (Stats ekranında gösteriliyor)
     stats: {
       str: 5,
       vit: 5,
       int: 5,
       agi: 5,
     },
-    evolutionStage: 1,
-    age: 0,
-    isSleeping: false,
-    poops: 0,
-    equippedAccessory: null,
   },
-  currency: 150, // Başlangıç parası
-  inventory: {
-    apple: 2,
-    fish: 1,
-    ball: 1, 
-  },
-  lastSaveTime: Date.now(),
-  weather: 'SUNNY',
 };
