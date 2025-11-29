@@ -276,36 +276,185 @@ const ProceduralIcon = ({ type, size = 32, className = '' }: any) => {
 };
 
 // --- Procedural Dragon Logic ---
-const BASE_DRAGON = [
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-  [0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
-  [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-  [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-  [0, 0, 1, 1, 3, 3, 1, 1, 1, 3, 3, 1, 1, 0, 0, 0],
-  [0, 0, 1, 1, 3, 3, 1, 1, 1, 3, 3, 1, 1, 0, 0, 0],
-  [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-  [0, 0, 0, 1, 1, 2, 1, 1, 1, 2, 1, 1, 0, 0, 0, 0],
-  [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 1, 4, 4, 4, 1, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 1, 1, 4, 4, 4, 1, 1, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 1, 1, 4, 4, 4, 1, 1, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 2, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-];
-function getDragonColors(val: number, mode: string, age: string, t: number = 0) {
-    let body = '#ef4444', shadow = '#991b1b', eye = '#fbbf24', belly = '#fee2e2';
-    if(age === 'baby') { body = '#f87171'; shadow = '#b91c1c'; }
+// EVRİM AŞAMALARI İÇİN PİKSEL IZGARALAR
+// 1: Gövde, 2: Gölge/Detay, 3: Göz, 4: Göbek/Kanat İçi, 5: Beyaz (Sakal)
+const DRAGON_SPRITES = {
+  BABY: {
+    FRONT: [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,0,1,3,1,1,1,3,1,0,0,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+      [0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0],
+      [0,0,0,0,0,1,4,4,4,1,0,0,0,0,0,0],
+      [0,0,0,0,0,1,4,4,4,1,0,0,0,0,0,0],
+      [0,0,0,0,1,1,4,4,4,1,1,0,0,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    ],
+    SIDE: [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0],
+      [0,0,0,0,1,1,1,3,1,1,0,0,0,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0],
+      [0,0,0,0,1,1,4,4,1,0,0,0,0,0,0,0],
+      [0,0,0,0,4,4,4,4,1,0,0,0,0,0,0,0],
+      [0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0],
+      [0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    ]
+  },
+  TEEN: {
+    FRONT: [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,0,1,3,1,1,1,3,1,0,0,0,0,0],
+      [0,0,1,0,1,1,1,1,1,1,1,0,1,0,0,0],
+      [0,0,1,1,1,1,4,4,4,1,1,1,1,0,0,0],
+      [0,0,1,1,1,1,4,4,4,1,1,1,1,0,0,0],
+      [0,0,0,1,1,1,4,4,4,1,1,1,0,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,0],
+      [0,0,0,0,2,2,0,0,0,2,2,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    ],
+    SIDE: [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],
+      [0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0],
+      [0,0,0,0,0,0,1,1,1,1,3,1,1,0,0,0],
+      [0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0],
+      [0,0,0,4,4,0,0,1,1,1,1,0,0,0,0,0],
+      [0,0,4,4,4,1,1,1,4,4,1,0,0,0,0,0],
+      [0,0,0,1,1,1,1,1,4,4,1,0,0,0,0,0],
+      [0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+      [1,1,1,1,0,0,1,1,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    ]
+  },
+  ADULT: {
+    FRONT: [
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+      [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+      [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+      [0, 0, 1, 1, 3, 3, 1, 1, 1, 3, 3, 1, 1, 0, 0, 0],
+      [0, 0, 1, 1, 3, 3, 1, 1, 1, 3, 3, 1, 1, 0, 0, 0],
+      [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+      [0, 0, 0, 1, 1, 2, 1, 1, 1, 2, 1, 1, 0, 0, 0, 0],
+      [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 1, 4, 4, 4, 1, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 1, 1, 4, 4, 4, 1, 1, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 1, 1, 4, 4, 4, 1, 1, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 2, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ],
+    SIDE: [
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0],
+      [0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0],
+      [0, 0, 0, 4, 4, 4, 0, 0, 1, 1, 1, 3, 3, 1, 2, 0],
+      [0, 0, 4, 4, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0],
+      [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+      [0, 0, 1, 1, 1, 1, 1, 1, 1, 4, 4, 4, 0, 0, 0, 0],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 0, 0, 0, 0, 0],
+      [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]
+  },
+  ELDER: {
+    FRONT: [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0], // Horn tip (kırık olabilir)
+      [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0], // Head top
+      [0,0,0,1,2,2,1,1,2,2,1,0,0,0,0,0], // Eyebrows
+      [0,0,0,1,3,3,1,1,3,3,1,0,0,0,0,0], // Eyes
+      [0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+      [0,0,1,1,5,5,1,1,5,5,1,1,0,0,0,0], // Mustache/Beard
+      [0,0,0,1,1,1,5,5,1,1,1,0,0,0,0,0], // Beard
+      [0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0],
+      [0,0,0,1,1,4,4,4,4,1,1,0,0,0,0,0], // Droopy body
+      [0,0,0,1,4,4,4,4,4,4,1,0,0,0,0,0],
+      [0,0,0,1,4,4,4,4,4,4,1,0,0,0,0,0],
+      [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,2,2,0,0,0,0,2,2,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    ],
+    SIDE: [
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0],
+      [0,0,0,0,0,0,0,0,0,0,2,2,1,1,0,0], // Eyebrows
+      [0,0,0,0,0,0,0,0,0,1,1,3,1,1,0,0],
+      [0,0,0,0,0,4,0,0,0,1,1,5,5,1,0,0], // Beard
+      [0,0,0,4,4,4,0,0,1,1,1,1,1,0,0,0],
+      [0,0,0,4,4,4,1,1,1,1,1,1,0,0,0,0],
+      [0,0,1,1,1,1,1,1,4,4,4,0,0,0,0,0], // Droopy Belly
+      [1,1,1,1,0,0,0,1,2,2,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    ]
+  }
+};
+
+function getDragonColors(val: number, mode: string, age: DragonStage, t: number = 0) {
+    let body = '#ef4444', shadow = '#991b1b', eye = '#fbbf24', belly = '#fee2e2', white = '#ffffff';
+    
+    // Stage Colors
+    if(age === DragonStage.BABY) { body = '#f87171'; shadow = '#b91c1c'; }
+    if(age === DragonStage.ELDER) { body = '#b91c1c'; shadow = '#7f1d1d'; belly='#e5e7eb'; } // Desaturated/Darker for elder
+
     if(mode === 'rainbow') { const h = (t*100)%360; body = `hsl(${h}, 80%, 60%)`; }
-    if(val===3) return eye; if(val===4) return belly; if(val===1) return body; if(val===2) return shadow;
+    
+    if(val===3) return eye; 
+    if(val===4) return belly; 
+    if(val===1) return body; 
+    if(val===2) return shadow;
+    if(val===5) return white; // For Elder beard/eyes
     return null;
 }
-const ProceduralDragon = ({ stage, mode, accessory, className = '', animate = true, direction = 1 }: any) => {
+
+const ProceduralDragon = ({ stage, mode, accessory, className = '', animate = true, direction = 1, isMoving = false }: any) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const frameRef = useRef<number>(0);
     
-    // Yön çevirme stili
+    // Yön çevirme stili: direction 1 (sağ) ise normal, -1 (sol) ise flip
     const flipStyle = direction === -1 ? { transform: 'scaleX(-1)' } : {};
 
     useEffect(() => {
@@ -315,14 +464,23 @@ const ProceduralDragon = ({ stage, mode, accessory, className = '', animate = tr
         if (!ctx) return;
         const baseSize = 16, scale = 4, logicalSize = baseSize * scale;
         canvas.width = logicalSize; canvas.height = logicalSize;
+        
+        // Hangi gridi kullanacağız? Stage ve View (Front/Side) bazlı seçim
+        let currentStageData = DRAGON_SPRITES.ADULT;
+        if (stage === DragonStage.BABY) currentStageData = DRAGON_SPRITES.BABY;
+        else if (stage === DragonStage.TEEN) currentStageData = DRAGON_SPRITES.TEEN;
+        else if (stage === DragonStage.ELDER) currentStageData = DRAGON_SPRITES.ELDER;
+        
+        const dragonGrid = isMoving ? currentStageData.SIDE : currentStageData.FRONT;
+
         const render = (ts: number) => {
             if(!animate) { ctx.clearRect(0,0,canvas.width,canvas.height); }
             const t = ts/1000;
-            const offsetY = Math.sin(t*2)*0.5;
+            const offsetY = Math.sin(t*(isMoving ? 12 : 2))*0.5; // Uçarken daha hızlı kanat çırpma efekti
             ctx.clearRect(0,0,canvas.width,canvas.height);
             for(let by=0; by<16; by++) {
                 for(let bx=0; bx<16; bx++) {
-                    const val = BASE_DRAGON[by][bx];
+                    const val = dragonGrid[by][bx];
                     if(val===0) continue;
                     const c = getDragonColors(val, mode, stage, t);
                     if(!c) continue;
@@ -331,6 +489,8 @@ const ProceduralDragon = ({ stage, mode, accessory, className = '', animate = tr
                     }
                 }
             }
+             
+             // Aksesuarlar (Basit pozisyonlama)
              if(accessory === 'hat') { ctx.fillStyle = '#6366f1'; ctx.fillRect(20, 10 + offsetY, 24, 4); }
              else if(accessory === 'glasses') { ctx.fillStyle = '#000'; ctx.fillRect(16, 25+offsetY, 32, 2); }
              else if(accessory === 'crown') { ctx.fillStyle = '#fbbf24'; ctx.fillRect(20, 5 + offsetY, 24, 8); }
@@ -342,7 +502,7 @@ const ProceduralDragon = ({ stage, mode, accessory, className = '', animate = tr
         }
         frameRef.current = requestAnimationFrame(render);
         return () => cancelAnimationFrame(frameRef.current);
-    }, [stage, mode, animate, accessory]);
+    }, [stage, mode, animate, accessory, isMoving]);
     return <canvas ref={canvasRef} className={`image-rendering-pixelated w-full h-full object-contain ${className}`} style={flipStyle} />;
 };
 
@@ -649,10 +809,11 @@ export default function App() {
   useEffect(() => {
     const saved = localStorage.getItem('dragon_save_v2');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      setGameState(parsed.gameState);
-      if(parsed.upgrades) setHomeUpgrades(parsed.upgrades);
-      if(parsed.quests) setQuests(parsed.quests);
+      // Sadece kayıt var mı diye bak, otomatik yükleme yapma!
+      // const parsed = JSON.parse(saved);
+      // setGameState(parsed.gameState);
+      // if(parsed.upgrades) setHomeUpgrades(parsed.upgrades);
+      // if(parsed.quests) setQuests(parsed.quests);
       setHasSave(true);
     }
   }, []);
@@ -740,12 +901,20 @@ export default function App() {
         if(!isSleeping && newHunger < 80 && Math.random() < 0.002) {
             newPoops += 1;
         }
+        
+        // Evolution Logic
+        let newStage = prev.dragon.stage;
+        const xp = prev.dragon.xp;
+        if(prev.dragon.stage === DragonStage.BABY && xp > 20) newStage = DragonStage.TEEN;
+        if(prev.dragon.stage === DragonStage.TEEN && xp > 60) newStage = DragonStage.ADULT;
+        if(prev.dragon.stage === DragonStage.ADULT && xp > 150) newStage = DragonStage.ELDER;
 
         return {
           ...prev,
           weather: newWeather,
           dragon: {
             ...prev.dragon,
+            stage: newStage,
             hunger: newHunger,
             energy: newEnergy,
             hygiene: newHygiene,
@@ -996,6 +1165,11 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
       const item = ITEMS.find(i => i.id === id);
       return item ? item.image : 'BALL';
   };
+  
+  // Hareket kontrolü
+  const dx = targetPos.x - dracoPos.x;
+  const dy = targetPos.y - dracoPos.y;
+  const isMoving = Math.sqrt(dx*dx + dy*dy) > 0.5;
 
   return (
     <LcdScreen className="flex flex-col relative" isNight={dragon.isSleeping} upgrades={upgrades} onClick={handleScreenClick}>
@@ -1057,10 +1231,11 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
          >
             <div onClick={(e) => { e.stopPropagation(); onPet(); }} className="w-full h-full cursor-pointer pointer-events-auto">
                 <ProceduralDragon 
-                    stage={dragon.stage === DragonStage.ELDER ? 'old' : dragon.stage === DragonStage.BABY ? 'baby' : 'adult'} 
+                    stage={dragon.stage} // Pass DragonStage Enum
                     mode={dragon.isSleeping ? 'sleepy' : 'idle'} 
                     accessory={dragon.equippedAccessory} 
                     direction={targetPos.x < dracoPos.x ? -1 : 1}
+                    isMoving={isMoving}
                 />
             </div>
             {dragon.isSleeping && <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-2 rounded text-[10px]">Zzz...</div>}
