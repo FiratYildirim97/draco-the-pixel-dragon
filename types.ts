@@ -1,98 +1,224 @@
 // src/types.ts
 
-export enum Screen {
-  START = 'START',
-  HATCH = 'HATCH',
-  MAIN = 'MAIN',
-  MARKET = 'MARKET',
-  STATS = 'STATS',
-}
+// -----------------------------
+// Ekranlar (Screen)
+// -----------------------------
+export type Screen =
+  | 'HOME'
+  | 'STATS'
+  | 'SHOP'
+  | 'MINIGAMES_MENU'
+  | 'MINIGAME_CATCH'
+  | 'MINIGAME_TAP'
+  | 'MINIGAME_TARGET'   // 🎯 Hedefe Ateş
+  | 'MINIGAME_MEMORY'   // 🧩 Hafıza Kartları
+  | 'SLEEP'
+  | 'BATH'
+  | 'EAT'
+  | 'SKINS'             // Draco skin seçme ekranı
+  | 'UPGRADES'          // Ev geliştirmeleri ekranı
+  | 'SETTINGS';
 
-export enum DragonStage {
-  EGG = 'EGG',
-  BABY = 'BABY',
-  TEEN = 'TEEN',
-  ADULT = 'ADULT',
-  ELDER = 'ELDER',
-}
+// -----------------------------
+// Hava Durumu
+// -----------------------------
+export type WeatherType = 'sunny' | 'rainy' | 'snowy' | 'storm';
 
-export type WeatherType = 'SUNNY' | 'RAIN';
+// -----------------------------
+// Ejderha Gelişim Evresi
+// -----------------------------
+export type DragonStage = 'baby' | 'teen' | 'adult';
 
-export type ItemType = 'FOOD' | 'TOY' | 'ACCESSORY';
+// -----------------------------
+// Mini Oyun Tipleri
+// -----------------------------
+export type MiniGameType =
+  | 'catch_falling'
+  | 'tap_fast'
+  | 'target_shoot'      // 🎯 hedefe ateş
+  | 'memory_cards';     // 🧩 hafıza kartları
 
-export interface ItemEffect {
-  hunger?: number;
-  happiness?: number;
-  energy?: number;
-  health?: number;
-}
+// -----------------------------
+// Eşya / Item Tipleri
+// -----------------------------
+export type ItemCategory =
+  | 'food'
+  | 'toy'
+  | 'cleaning'
+  | 'potion'
+  | 'ticket'
+  | 'accessory';
 
+// Item’ın Draco’ya etkisi
+export type ItemEffectType =
+  | 'hunger'
+  | 'happiness'
+  | 'clean'
+  | 'energy'
+  | 'xp'
+  | 'gold';
+
+// En temel Item tipi
 export interface Item {
   id: string;
   name: string;
-  type: ItemType;
+  description: string;
+  category: ItemCategory;
   price: number;
-  image: string; // PIXEL_ART key: APPLE, FISH, STEAK, etc.
-  effect: ItemEffect;
+  effectType: ItemEffectType;
+  effectValue: number;
+  icon?: string;
 }
 
-export interface Stats {
-  str: number;
-  vit: number;
-  int: number;
-  agi: number;
-}
-
-export interface Dragon {
+// -----------------------------
+// Yeni Aksesuar Sistemi
+// -----------------------------
+export interface Accessory {
+  id: string;
   name: string;
-  stage: DragonStage;
-  evolutionStage: number;
-  age: number;
-
-  hunger: number;
-  happiness: number;
-  hygiene: number;
-  energy: number;
-  health: number;
-
-  xp: number;
-  maxXp: number;
-
-  isSleeping: boolean;
-  poops: number;
-
-  equippedAccessory: string | null; // 'hat', 'glasses', vb.
-  stats: Stats;
+  description: string;
+  bonusType: 'happiness' | 'cleaning' | 'minigame_gold' | 'attack_mode';
+  bonusValue: number;
+  color?: string; // örn: parlak sarı, kırmızı-beyaz, neon tonlar
 }
 
-export interface PermanentBuffs {
-  happinessDecayMultiplier: number; // <1 ise daha yavaş azalır
-  hygieneDecayMultiplier: number;
-  miniGameGoldMultiplier: number;
+// -----------------------------
+// Skin Sistemi (Draco karakterleri)
+// -----------------------------
+export interface DragonSkin {
+  id: string; // 'red_default' | 'ice_draco' | 'electric_draco' ...
+  name: string;
+  unlockLevel: number;
+  passive: {
+    // Temizlik daha yavaş azalır, mini oyun hız bonusu vs.
+    type: 'clean_decay' | 'minigame_speed' | 'none';
+    value: number;
+  };
+  palette: {
+    base: string;   // gövde rengi
+    accent: string; // detay rengi (kanat, boynuz vb.)
+  };
 }
+
+// -----------------------------
+// Ev Geliştirmeleri (Home Upgrade)
+// -----------------------------
+export interface HomeUpgrade {
+  id: string; // 'mini_forest' | 'cleaning_set' | 'weather_station'
+  name: string;
+  bonusType: 'happiness_rate' | 'cleaning_rate' | 'weather_bonus';
+  bonusValue: number;
+}
+
+// -----------------------------
+// NPC Sistemi
+// -----------------------------
+export interface NpcState {
+  id: 'mouse_friend' | 'owl_weather' | 'joker_dragon';
+  message: string;
+  rewardType: 'minigame_invite' | 'weather_info' | 'random_buff';
+}
+
+// -----------------------------
+// Günlük Görevler
+// -----------------------------
+export type DailyQuestType =
+  | 'feed_once'
+  | 'play_minigame'
+  | 'clean_poop'
+  | 'wash_draco_once'          // yeni
+  | 'win_minigame_once'        // yeni
+  | 'reach_happiness_80';      // yeni
 
 export interface DailyQuest {
   id: string;
+  type: DailyQuestType;
   description: string;
-  target: number;
-  progress: number;
-  rewardGold: number;
+  isCompleted: boolean;
   rewardXp: number;
-  completed: boolean;
+  rewardGold: number;
+  // skin açma parçası
+  rewardSkinShards?: number;
 }
 
-export interface GameState {
-  screen: Screen;
-  dragon: Dragon;
-  inventory: Record<string, number>;
-  currency: number;
-  weather: WeatherType;
+// -----------------------------
+// Draco’nun durum istatistikleri
+// -----------------------------
+export interface DragonStats {
+  happiness: number; // 0–100
+  hunger: number;    // 0–100 (0 = tok, 100 = aç)
+  energy: number;    // 0–100
+  cleanliness: number; // 0–100
+}
 
-  // Uzun vadeli progression
-  buffs: PermanentBuffs;
+// -----------------------------
+// Görsel Efektler (küçük partiküller vs.)
+// -----------------------------
+export interface VisualEffect {
+  id: number;
+  type: 'sparkle' | 'level_up' | 'clean_sparkle' | 'tap_happy';
+  x: number;
+  y: number;
+  lifetime: number;
+}
+
+// -----------------------------
+// Oyunun Ana State’i
+// -----------------------------
+export interface GameState {
+  // Genel
+  level: number;
+  xp: number;
+  gold: number;
+
+  stage: DragonStage;
+  stats: DragonStats;
+
+  currentScreen: Screen;
+  currentWeather: WeatherType;
+
+  // Zaman / kayıt
+  lastSaveAt: number;
+  lastUpdateAt: number;
+
+  // Poop ve temizlik
+  poopCount: number;
+
+  // Envanter
+  inventory: Item[];
+
+  // Aktif mini oyun
+  activeMiniGame?: MiniGameType;
+  miniGameStreak: number;
 
   // Günlük görevler
   dailyQuests: DailyQuest[];
-  lastQuestDate: string | null;
-  dailyStreak: number;
+  lastDailyResetAt: number;
+
+  // 🎧 Aksesuar sistemi
+  equippedAccessoryId?: string; // şu an takılı olan aksesuar ID’si
+
+  // 🎨 Skin sistemi
+  activeSkinId: string;       // hangi skin kullanılıyor
+  unlockedSkins: string[];    // açılmış skin ID listesi
+
+  // 🏠 Ev geliştirmeleri
+  ownedUpgrades: string[];    // sahip olunan upgrade ID listesi
+
+  // 🧍‍♂️ NPC
+  activeNpc?: NpcState;       // ekranda görünen NPC varsa
+
+  // 🔹 Skin parçaları
+  skinShards: number;
+
+  // Görsel efektler
+  visualEffects: VisualEffect[];
+}
+
+// -----------------------------
+// Kaydedilen veri (persist)
+// -----------------------------
+export interface PersistedGameState {
+  version: number;
+  state: GameState;
 }
