@@ -1089,11 +1089,11 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
         </div>
       </div>
 
-      {showInventory && <InventoryModal inventory={gameState.inventory} onClose={() => setShowInventory(false)} onSelect={(i) => { 
+      {showInventory && <InventoryModal inventory={gameState.inventory} onClose={() => setShowInventory(false)} onSelect={(i: Item) => { 
           if(i.type === 'TOY') { activateToy(i.id); } 
           else { setShowInventory(false); onAction({ type: 'USE_ITEM', item: i }); if(i.type==='ACCESSORY') onAction({type:'EQUIP', item:i}); }
       }} />}
-      {showMiniGame && <MiniGameModal onClose={() => setShowMiniGame(false)} onPlayToy={() => activateToy('ball')} onComplete={(res, game) => { onMiniGameComplete(res, game); setShowMiniGame(false); }} />}
+      {showMiniGame && <MiniGameModal onClose={() => setShowMiniGame(false)} onPlayToy={() => activateToy('ball')} onComplete={(res: 'WIN'|'LOSE'|'DRAW', game: MiniGameType) => { onMiniGameComplete(res, game); setShowMiniGame(false); }} />}
       {showQuests && <QuestModal quests={quests} onClaim={onClaimQuest} onClose={() => setShowQuests(false)} />}
     </LcdScreen>
   );
