@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <defs>
+    <style>
+      .r { fill: #ef4444; } /* Red Body */
+      .d { fill: #991b1b; } /* Dark Red */
+      .y { fill: #fbbf24; } /* Yellow Eye */
+    </style>
+  </defs>
+  <!-- Horns -->
+  <rect x="2" y="1" width="1" height="1" class="r"/>
+  <rect x="12" y="1" width="1" height="1" class="r"/>
+  <rect x="2" y="2" width="2" height="1" class="r"/>
+  <rect x="11" y="2" width="2" height="1" class="r"/>
+  <!-- Head -->
+  <rect x="3" y="3" width="9" height="1" class="r"/>
+  <rect x="3" y="4" width="9" height="1" class="r"/>
+  <!-- Eyes Row 1 -->
+  <rect x="2" y="5" width="2" height="1" class="r"/>
+  <rect x="4" y="5" width="2" height="1" class="y"/>
+  <rect x="6" y="5" width="3" height="1" class="r"/>
+  <rect x="9" y="5" width="2" height="1" class="y"/>
+  <rect x="11" y="5" width="2" height="1" class="r"/>
+  <!-- Eyes Row 2 -->
+  <rect x="2" y="6" width="2" height="1" class="r"/>
+  <rect x="4" y="6" width="2" height="1" class="y"/>
+  <rect x="6" y="6" width="3" height="1" class="r"/>
+  <rect x="9" y="6" width="2" height="1" class="y"/>
+  <rect x="11" y="6" width="2" height="1" class="r"/>
+  <!-- Cheeks -->
+  <rect x="2" y="7" width="11" height="1" class="r"/>
+  <!-- Snout -->
+  <rect x="3" y="8" width="2" height="1" class="r"/>
+  <rect x="5" y="8" width="1" height="1" class="d"/>
+  <rect x="6" y="8" width="3" height="1" class="r"/>
+  <rect x="9" y="8" width="1" height="1" class="d"/>
+  <rect x="10" y="8" width="2" height="1" class="r"/>
+  <!-- Chin -->
+  <rect x="4" y="9" width="7" height="1" class="r"/>
+</svg>
