@@ -10,8 +10,6 @@ import {
   DragonSkin,
   HomeUpgrade,
   MiniGameType,
-  NpcState,
-  VisualEffect,
   DailyQuestType,
 } from './types';
 
@@ -23,7 +21,7 @@ export const ITEMS: Item[] = [
     type: 'FOOD',
     price: 10,
     image: 'APPLE',
-    effect: { hunger: 20, happiness: 5 },
+    effect: { hunger: 20, happiness: 5, stats: { vit: 1 } },
   },
   {
     id: 'steak',
@@ -31,7 +29,7 @@ export const ITEMS: Item[] = [
     type: 'FOOD',
     price: 30,
     image: 'STEAK',
-    effect: { hunger: 40, happiness: 10, health: 5 },
+    effect: { hunger: 40, happiness: 10, health: 5, stats: { str: 2 } },
   },
   {
     id: 'salad',
@@ -39,7 +37,7 @@ export const ITEMS: Item[] = [
     type: 'FOOD',
     price: 18,
     image: 'SALAD',
-    effect: { hunger: 15, health: 10 },
+    effect: { hunger: 15, health: 10, stats: { int: 1 } },
   },
   {
     id: 'fish',
@@ -47,7 +45,7 @@ export const ITEMS: Item[] = [
     type: 'FOOD',
     price: 22,
     image: 'FISH',
-    effect: { hunger: 25, happiness: 8, health: 5 },
+    effect: { hunger: 25, happiness: 8, health: 5, stats: { int: 2 } },
   },
   {
     id: 'magic_potion',
@@ -58,6 +56,24 @@ export const ITEMS: Item[] = [
     effect: { hunger: 10, happiness: 25, energy: 20, health: 20 },
   },
 
+  // --- TOHUMLAR (SEED) ---
+  {
+    id: 'seed_apple',
+    name: 'Elma Tohumu',
+    type: 'SEED',
+    price: 5,
+    image: 'SEED_APPLE',
+    effect: {},
+  },
+  {
+    id: 'seed_salad',
+    name: 'Marul Tohumu',
+    type: 'SEED',
+    price: 8,
+    image: 'SEED_SALAD',
+    effect: {},
+  },
+
   // --- OYUNCAKLAR (TOY) ---
   {
     id: 'ball',
@@ -65,7 +81,7 @@ export const ITEMS: Item[] = [
     type: 'TOY',
     price: 25,
     image: 'BALL',
-    effect: { happiness: 15, energy: -5 },
+    effect: { happiness: 15, energy: -5, stats: { agi: 1 } },
   },
   {
     id: 'plush_dragon',
@@ -80,7 +96,7 @@ export const ITEMS: Item[] = [
     name: "Draco's Flame Show",
     type: 'TOY',
     price: 55,
-    image: 'CIRCUS_RING',   // Bunu birazdan PIXEL_ART'a ekliyoruz
+    image: 'CIRCUS_RING',
     effect: { happiness: 25, energy: -5 },
   },
 
@@ -121,6 +137,7 @@ export const INITIAL_GAME_STATE: GameState = {
   dragon: {
     name: 'DRACO',
     stage: DragonStage.EGG,
+    type: 'NORMAL',
     evolutionStage: 1,
     age: 0,
 
@@ -149,7 +166,15 @@ export const INITIAL_GAME_STATE: GameState = {
     apple: 2,
     steak: 1,
     ball: 1,
+    seed_apple: 1, // Başlangıç hediyesi
   },
+
+  garden: [
+    { id: 0, isUnlocked: true, seedId: null, stage: 0, progress: 0, lastWatered: 0 },
+    { id: 1, isUnlocked: true, seedId: null, stage: 0, progress: 0, lastWatered: 0 },
+    { id: 2, isUnlocked: false, seedId: null, stage: 0, progress: 0, lastWatered: 0 },
+    { id: 3, isUnlocked: false, seedId: null, stage: 0, progress: 0, lastWatered: 0 },
+  ],
 
   buffs: {
     happinessDecayMultiplier: 1,
@@ -161,7 +186,6 @@ export const INITIAL_GAME_STATE: GameState = {
   lastQuestDate: null,
   dailyStreak: 0,
 
-  // --- Yeni alanların başlangıç değerleri ---
   activeMiniGame: null,
   miniGameStreak: 0,
 
@@ -171,16 +195,11 @@ export const INITIAL_GAME_STATE: GameState = {
 
   ownedUpgrades: [],
 
-  activeNpc: undefined as NpcState | undefined,
+  activeNpc: undefined,
 
-  visualEffects: [] as VisualEffect[],
+  visualEffects: [],
 };
 
-// --------------------------------------------------
-// YENİ SİSTEMLER İÇİN SABİTLER
-// --------------------------------------------------
-
-// Aksesuarlar (ID'ler Item.id ile hizalı, + ekstra özel aksesuarlar)
 export const ACCESSORIES: Accessory[] = [
   {
     id: 'hat',
@@ -206,7 +225,6 @@ export const ACCESSORIES: Accessory[] = [
     bonusValue: 5,
     color: '#FFD700',
   },
-  // Planladığımız yeni aksesuarlar
   {
     id: 'CROWN_KING',
     name: 'Kral Tacı',
@@ -241,81 +259,7 @@ export const ACCESSORIES: Accessory[] = [
   },
 ];
 
-// Skinler
-export const SKINS: DragonSkin[] = [
-  {
-    id: 'RED_DEFAULT',
-    name: 'Kırmızı Draco',
-    unlockLevel: 1,
-    passive: {
-      type: 'NONE',
-      value: 0,
-    },
-    palette: {
-      base: '#FF3B3B',
-      accent: '#B22222',
-    },
-  },
-  {
-    id: 'ICE_DRAGON',
-    name: 'Buz Draco',
-    unlockLevel: 5,
-    passive: {
-      type: 'CLEAN_DECAY',
-      value: 0.8, // %20 daha yavaş kirlenme
-    },
-    palette: {
-      base: '#66D9FF',
-      accent: '#0099CC',
-    },
-  },
-  {
-    id: 'ELECTRIC_DRAGON',
-    name: 'Elektrik Draco',
-    unlockLevel: 10,
-    passive: {
-      type: 'MINIGAME_SPEED',
-      value: 1.2, // mini oyunlarda %20 hız/avantaj
-    },
-    palette: {
-      base: '#FFE066',
-      accent: '#FFB400',
-    },
-  },
-];
-
-// Ev geliştirmeleri
-export const HOME_UPGRADES: HomeUpgrade[] = [
-  {
-    id: 'MINI_FOREST',
-    name: 'Mini Orman',
-    bonusType: 'HAPPINESS_RATE',
-    bonusValue: 0.2,
-  },
-  {
-    id: 'CLEANING_SET',
-    name: 'Temizlik Seti',
-    bonusType: 'HYGIENE_RATE',
-    bonusValue: 0.3,
-  },
-  {
-    id: 'WEATHER_STATION',
-    name: 'Hava İstasyonu',
-    bonusType: 'WEATHER_BONUS',
-    bonusValue: 1,
-  },
-];
-
-// Günlük görev havuzu
-export const DAILY_QUEST_POOL: {
-  id: string;
-  type: DailyQuestType;
-  description: string;
-  target: number;
-  rewardGold: number;
-  rewardXp: number;
-  rewardSkinShards?: number;
-}[] = [
+export const DAILY_QUEST_POOL = [
   {
     id: 'FEED_ONCE',
     type: 'FEED_ONCE',
@@ -352,11 +296,3 @@ export const DAILY_QUEST_POOL: {
     rewardSkinShards: 1,
   },
 ];
-
-// Mini oyun ödülleri
-export const MINIGAME_REWARDS: Record<MiniGameType, { xp: number; gold: number }> = {
-  CATCH_FALLING: { xp: 10, gold: 8 },
-  TAP_FAST: { xp: 12, gold: 10 },
-  TARGET_SHOOT: { xp: 15, gold: 12 },
-  MEMORY_CARDS: { xp: 25, gold: 5 },
-};

@@ -1,9 +1,57 @@
-
 // src/App.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { GameState, Screen, DragonStage, Item, WeatherType } from './types';
+import { GameState, Screen, DragonStage, Item, WeatherType, MiniGameType, NpcState, DragonType, GardenPlot } from './types';
 import { ITEMS, INITIAL_GAME_STATE } from './constants';
+
+// --- AUDIO ENGINE ---
+const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+const SoundEngine = {
+  playTone: (freq: number, type: OscillatorType, duration: number, vol: number = 0.1) => {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  },
+  playJump: () => {
+    SoundEngine.playTone(150, 'square', 0.1);
+    setTimeout(() => SoundEngine.playTone(300, 'square', 0.2), 100);
+  },
+  playEat: () => {
+    SoundEngine.playTone(200, 'sawtooth', 0.1);
+    setTimeout(() => SoundEngine.playTone(150, 'sawtooth', 0.1), 100);
+  },
+  playCoin: () => {
+    SoundEngine.playTone(1000, 'sine', 0.1, 0.05);
+    setTimeout(() => SoundEngine.playTone(1500, 'sine', 0.3, 0.05), 100);
+  },
+  playEvolve: () => {
+    [220, 330, 440, 550, 660, 880].forEach((f, i) => {
+      setTimeout(() => SoundEngine.playTone(f, 'square', 0.3, 0.1), i * 150);
+    });
+  },
+  playBattleHit: () => {
+    SoundEngine.playTone(100, 'sawtooth', 0.2, 0.2);
+  },
+  playBattleWin: () => {
+    SoundEngine.playTone(400, 'square', 0.2);
+    setTimeout(() => SoundEngine.playTone(600, 'square', 0.4), 200);
+  },
+  playDefend: () => {
+    SoundEngine.playTone(800, 'triangle', 0.1, 0.1);
+  },
+  playCharge: () => {
+    SoundEngine.playTone(300, 'sine', 0.5, 0.1);
+  }
+};
 
 // --- Types ---
 interface FloatingText {
@@ -12,25 +60,6 @@ interface FloatingText {
   x: number;
   y: number;
   color: string;
-}
-
-type MiniGameType =
-  | 'NONE'
-  | 'RPS'
-  | 'MATH'
-  | 'CATCH'
-  | 'TAP'
-  | 'FLAME_SHOW'
-  | 'TARGET'
-  | 'MEMORY';
-
-type NpcType = 'MOUSE' | 'OWL' | 'JOKER';
-
-interface NpcState {
-  type: NpcType;
-  message: string;
-  x: number; // Yüzde konumu
-  y: number;
 }
 
 interface HomeUpgrades {
@@ -75,6 +104,32 @@ const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
       [0, 0, 0, 0, 0, 0, 0, 0],
     ],
     palette: ['transparent', '#ef4444', '#166534', '#fca5a5'],
+  },
+  SEED_APPLE: {
+     grid: [
+         [0,0,0,0,0,0,0,0],
+         [0,0,0,0,0,0,0,0],
+         [0,0,0,1,1,0,0,0],
+         [0,0,1,2,2,1,0,0],
+         [0,0,1,2,2,1,0,0],
+         [0,0,0,1,1,0,0,0],
+         [0,0,0,0,0,0,0,0],
+         [0,0,0,0,0,0,0,0],
+     ],
+     palette: ['transparent', '#5c3a21', '#3e2723']
+  },
+  SEED_SALAD: {
+     grid: [
+         [0,0,0,0,0,0,0,0],
+         [0,0,0,0,0,0,0,0],
+         [0,0,1,1,1,0,0,0],
+         [0,0,1,1,1,0,0,0],
+         [0,0,1,1,1,0,0,0],
+         [0,0,0,0,0,0,0,0],
+         [0,0,0,0,0,0,0,0],
+         [0,0,0,0,0,0,0,0],
+     ],
+     palette: ['transparent', '#fef3c7']
   },
   FISH: {
     grid: [
@@ -244,6 +299,32 @@ const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
         [0,0,0,0,0,0,0,0],
     ],
     palette: ['transparent', '#db2777', '#facc15', '#ffffff', '#000', '#ef4444']
+  },
+  ROCK: {
+    grid: [
+        [0,0,0,0,0,0,0,0],
+        [0,0,0,1,1,0,0,0],
+        [0,0,1,1,1,1,0,0],
+        [0,1,1,2,2,1,1,0],
+        [0,1,2,2,2,2,1,0],
+        [1,1,2,2,2,2,1,1],
+        [1,1,1,1,1,1,1,1],
+        [0,0,0,0,0,0,0,0],
+    ],
+    palette: ['transparent', '#4b5563', '#1f2937']
+  },
+  NOTE: {
+    grid: [
+        [0,0,0,0,0,1,0,0],
+        [0,0,0,0,0,1,1,0],
+        [0,0,0,0,0,1,0,1],
+        [0,0,0,0,0,1,0,0],
+        [0,0,0,0,0,1,0,0],
+        [0,1,1,1,1,1,0,0],
+        [1,1,1,1,1,1,0,0],
+        [0,1,1,1,1,0,0,0],
+    ],
+    palette: ['transparent', '#facc15']
   }
 };
 
@@ -275,9 +356,6 @@ const ProceduralIcon = ({ type, size = 32, className = '' }: any) => {
   return <canvas ref={canvasRef} className={`image-rendering-pixelated ${className}`} style={{ width: size, height: size }} />;
 };
 
-// --- Procedural Dragon Logic ---
-// EVRİM AŞAMALARI İÇİN PİKSEL IZGARALAR
-// 1: Gövde, 2: Gölge/Detay, 3: Göz, 4: Göbek/Kanat İçi, 5: Beyaz (Sakal)
 const DRAGON_SPRITES = {
   BABY: {
     FRONT: [
@@ -396,15 +474,15 @@ const DRAGON_SPRITES = {
   ELDER: {
     FRONT: [
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0], // Horn tip (kırık olabilir)
-      [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0], // Head top
-      [0,0,0,1,2,2,1,1,2,2,1,0,0,0,0,0], // Eyebrows
-      [0,0,0,1,3,3,1,1,3,3,1,0,0,0,0,0], // Eyes
+      [0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0], 
+      [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0], 
+      [0,0,0,1,2,2,1,1,2,2,1,0,0,0,0,0], 
+      [0,0,0,1,3,3,1,1,3,3,1,0,0,0,0,0], 
       [0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
-      [0,0,1,1,5,5,1,1,5,5,1,1,0,0,0,0], // Mustache/Beard
-      [0,0,0,1,1,1,5,5,1,1,1,0,0,0,0,0], // Beard
+      [0,0,1,1,5,5,1,1,5,5,1,1,0,0,0,0], 
+      [0,0,0,1,1,1,5,5,1,1,1,0,0,0,0,0], 
       [0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0],
-      [0,0,0,1,1,4,4,4,4,1,1,0,0,0,0,0], // Droopy body
+      [0,0,0,1,1,4,4,4,4,1,1,0,0,0,0,0], 
       [0,0,0,1,4,4,4,4,4,4,1,0,0,0,0,0],
       [0,0,0,1,4,4,4,4,4,4,1,0,0,0,0,0],
       [0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
@@ -415,12 +493,12 @@ const DRAGON_SPRITES = {
     SIDE: [
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0],
-      [0,0,0,0,0,0,0,0,0,0,2,2,1,1,0,0], // Eyebrows
+      [0,0,0,0,0,0,0,0,0,0,2,2,1,1,0,0], 
       [0,0,0,0,0,0,0,0,0,1,1,3,1,1,0,0],
-      [0,0,0,0,0,4,0,0,0,1,1,5,5,1,0,0], // Beard
+      [0,0,0,0,0,4,0,0,0,1,1,5,5,1,0,0], 
       [0,0,0,4,4,4,0,0,1,1,1,1,1,0,0,0],
       [0,0,0,4,4,4,1,1,1,1,1,1,0,0,0,0],
-      [0,0,1,1,1,1,1,1,4,4,4,0,0,0,0,0], // Droopy Belly
+      [0,0,1,1,1,1,1,1,4,4,4,0,0,0,0,0], 
       [1,1,1,1,0,0,0,1,2,2,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -433,28 +511,30 @@ const DRAGON_SPRITES = {
   }
 };
 
-function getDragonColors(val: number, mode: string, age: DragonStage, t: number = 0) {
+function getDragonColors(val: number, type: DragonType, age: DragonStage, t: number = 0) {
     let body = '#ef4444', shadow = '#991b1b', eye = '#fbbf24', belly = '#fee2e2', white = '#ffffff';
     
-    // Stage Colors
-    if(age === DragonStage.BABY) { body = '#f87171'; shadow = '#b91c1c'; }
-    if(age === DragonStage.ELDER) { body = '#b91c1c'; shadow = '#7f1d1d'; belly='#e5e7eb'; } // Desaturated/Darker for elder
-
-    if(mode === 'rainbow') { const h = (t*100)%360; body = `hsl(${h}, 80%, 60%)`; }
+    // Type Colors
+    if (type === 'FIRE') { body = '#dc2626'; shadow = '#7f1d1d'; belly = '#fca5a5'; }
+    else if (type === 'ICE') { body = '#06b6d4'; shadow = '#0e7490'; belly = '#cffafe'; }
+    else if (type === 'NATURE') { body = '#16a34a'; shadow = '#14532d'; belly = '#dcfce7'; }
     
+    // Stage Overrides
+    if(age === DragonStage.BABY) { body = '#f87171'; shadow = '#b91c1c'; }
+    if(age === DragonStage.ELDER) { body = '#b91c1c'; shadow = '#7f1d1d'; belly='#e5e7eb'; }
+
     if(val===3) return eye; 
     if(val===4) return belly; 
     if(val===1) return body; 
     if(val===2) return shadow;
-    if(val===5) return white; // For Elder beard/eyes
+    if(val===5) return white; 
     return null;
 }
 
-const ProceduralDragon = ({ stage, mode, accessory, className = '', animate = true, direction = 1, isMoving = false }: any) => {
+const ProceduralDragon = ({ stage, type='NORMAL', accessory, className = '', animate = true, direction = 1, isMoving = false }: any) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const frameRef = useRef<number>(0);
     
-    // Yön çevirme stili: direction 1 (sağ) ise normal, -1 (sol) ise flip
     const flipStyle = direction === -1 ? { transform: 'scaleX(-1)' } : {};
 
     useEffect(() => {
@@ -465,7 +545,6 @@ const ProceduralDragon = ({ stage, mode, accessory, className = '', animate = tr
         const baseSize = 16, scale = 4, logicalSize = baseSize * scale;
         canvas.width = logicalSize; canvas.height = logicalSize;
         
-        // Hangi gridi kullanacağız? Stage ve View (Front/Side) bazlı seçim
         let currentStageData = DRAGON_SPRITES.ADULT;
         if (stage === DragonStage.BABY) currentStageData = DRAGON_SPRITES.BABY;
         else if (stage === DragonStage.TEEN) currentStageData = DRAGON_SPRITES.TEEN;
@@ -476,13 +555,13 @@ const ProceduralDragon = ({ stage, mode, accessory, className = '', animate = tr
         const render = (ts: number) => {
             if(!animate) { ctx.clearRect(0,0,canvas.width,canvas.height); }
             const t = ts/1000;
-            const offsetY = Math.sin(t*(isMoving ? 12 : 2))*0.5; // Uçarken daha hızlı kanat çırpma efekti
+            const offsetY = Math.sin(t*(isMoving ? 12 : 2))*0.5;
             ctx.clearRect(0,0,canvas.width,canvas.height);
             for(let by=0; by<16; by++) {
                 for(let bx=0; bx<16; bx++) {
                     const val = dragonGrid[by][bx];
                     if(val===0) continue;
-                    const c = getDragonColors(val, mode, stage, t);
+                    const c = getDragonColors(val, type, stage, t);
                     if(!c) continue;
                     for(let sy=0; sy<scale; sy++) for(let sx=0; sx<scale; sx++) {
                         ctx.fillStyle = c; ctx.fillRect(bx*scale+sx, by*scale+sy+offsetY, 1, 1);
@@ -490,7 +569,6 @@ const ProceduralDragon = ({ stage, mode, accessory, className = '', animate = tr
                 }
             }
              
-             // Aksesuarlar (Basit pozisyonlama)
              if(accessory === 'hat') { ctx.fillStyle = '#6366f1'; ctx.fillRect(20, 10 + offsetY, 24, 4); }
              else if(accessory === 'glasses') { ctx.fillStyle = '#000'; ctx.fillRect(16, 25+offsetY, 32, 2); }
              else if(accessory === 'crown') { ctx.fillStyle = '#fbbf24'; ctx.fillRect(20, 5 + offsetY, 24, 8); }
@@ -502,11 +580,10 @@ const ProceduralDragon = ({ stage, mode, accessory, className = '', animate = tr
         }
         frameRef.current = requestAnimationFrame(render);
         return () => cancelAnimationFrame(frameRef.current);
-    }, [stage, mode, animate, accessory, isMoving]);
+    }, [stage, type, animate, accessory, isMoving]);
     return <canvas ref={canvasRef} className={`image-rendering-pixelated w-full h-full object-contain ${className}`} style={flipStyle} />;
 };
 
-// --- Components ---
 const PixelButton = ({ children, onClick, className = '', disabled = false, variant = 'default' }: any) => {
     let s = 'bg-gray-200 border-4 border-gray-800 text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-100';
     if(variant === 'primary') s = 'bg-[#ef4444] border-4 border-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:brightness-110';
@@ -545,9 +622,6 @@ const QuestModal = ({ quests, onClaim, onClose }: { quests: DailyQuest[], onClai
     </div>
 );
 
-// --- Game Logic Components ---
-
-// 1. Rock Paper Scissors
 const RpsGame = ({ onComplete }: any) => {
     const [status, setStatus] = useState<'PICK' | 'RESULT'>('PICK');
     const [result, setResult] = useState<string>('');
@@ -595,7 +669,6 @@ const RpsGame = ({ onComplete }: any) => {
     );
 };
 
-// 2. Math Game
 const MathGame = ({ onComplete }: any) => {
     const [question, setQuestion] = useState<{q:string, a:number} | null>(null);
     const [options, setOptions] = useState<number[]>([]);
@@ -631,7 +704,6 @@ const MathGame = ({ onComplete }: any) => {
     );
 };
 
-// 3. Memory Game
 const MemoryGame = ({ onComplete }: any) => {
     const [cards, setCards] = useState<{id:number, icon:string, flipped:boolean, matched:boolean}[]>([]);
     const [flipped, setFlipped] = useState<number[]>([]);
@@ -661,7 +733,6 @@ const MemoryGame = ({ onComplete }: any) => {
             const c2 = newCards.find(c=>c.id===newFlipped[1]);
             
             if(c1 && c2 && c1.icon === c2.icon) {
-                // Match
                 setTimeout(() => {
                     setCards(curr => {
                         const next = curr.map(c => (c.id === c1.id || c.id === c2.id) ? {...c, matched: true} : c);
@@ -671,7 +742,6 @@ const MemoryGame = ({ onComplete }: any) => {
                     setFlipped([]);
                 }, 500);
             } else {
-                // No Match
                 setTimeout(() => {
                     setCards(curr => curr.map(c => (c.id === newFlipped[0] || c.id === newFlipped[1]) ? {...c, flipped: false} : c));
                     setFlipped([]);
@@ -691,7 +761,6 @@ const MemoryGame = ({ onComplete }: any) => {
     );
 };
 
-// 4. Target Game
 const TargetGame = ({ onComplete }: any) => {
     const [pos, setPos] = useState({x:50, y:50});
     const [score, setScore] = useState(0);
@@ -714,6 +783,7 @@ const TargetGame = ({ onComplete }: any) => {
     const hit = () => {
         setScore(s => s+1);
         setPos({x: Math.random()*80+10, y: Math.random()*80+10});
+        SoundEngine.playCoin();
     };
     
     return (
@@ -730,6 +800,117 @@ const TargetGame = ({ onComplete }: any) => {
     );
 };
 
+const RunnerGame = ({ onComplete }: any) => {
+  const [score, setScore] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const [dracoY, setDracoY] = useState(0);
+  const [obstacles, setObstacles] = useState<number[]>([]);
+  const tickRef = useRef(0);
+  const animRef = useRef(0);
+
+  const jump = () => {
+    if (dracoY === 0) {
+      SoundEngine.playJump();
+      let velocity = 15;
+      const jumpInterval = setInterval(() => {
+        setDracoY((prev) => {
+          const next = prev + velocity;
+          velocity -= 1.5;
+          if (next <= 0) {
+             clearInterval(jumpInterval);
+             return 0;
+          }
+          return next;
+        });
+      }, 30);
+    }
+  };
+
+  useEffect(() => {
+    const loop = () => {
+      if (gameOver) return;
+      setScore(s => s + 1);
+      tickRef.current++;
+      if (tickRef.current % 100 === 0) setObstacles(prev => [...prev, 100]);
+      setObstacles(prev => {
+        const next = prev.map(x => x - 1.5).filter(x => x > -10);
+        for (const obs of next) {
+           if (obs > 10 && obs < 20 && dracoY < 10) setGameOver(true);
+        }
+        return next;
+      });
+      animRef.current = requestAnimationFrame(loop);
+    };
+    animRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [gameOver, dracoY]);
+
+  return (
+    <div className="w-full h-40 bg-sky-300 relative overflow-hidden border-4 border-black" onClick={jump}>
+       <div className="absolute bottom-0 w-full h-4 bg-green-600"></div>
+       <div className="absolute left-4 transition-transform" style={{ bottom: `${dracoY * 2 + 16}px` }}>
+         <ProceduralDragon stage={DragonStage.TEEN} color="#ef4444" isMoving={true} scale={2} />
+       </div>
+       {obstacles.map((x, i) => (
+         <div key={i} className="absolute bottom-4" style={{ left: `${x}%` }}><ProceduralIcon type="ROCK" size={20} /></div>
+       ))}
+       <div className="absolute top-2 right-2 text-white">Score: {Math.floor(score/10)}</div>
+       {gameOver && (
+         <button className="absolute inset-0 bg-black/50 text-white flex items-center justify-center" onClick={() => onComplete('WIN', 'RUNNER')}>
+           GAME OVER (Click)
+         </button>
+       )}
+    </div>
+  );
+};
+
+const RhythmGame = ({ onComplete }: any) => {
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(20);
+  const [notes, setNotes] = useState<{id: number, lane: number, y: number}[]>([]);
+  const [active, setActive] = useState(true);
+  
+  useEffect(() => {
+    if(!active) return;
+    const t = setInterval(() => setTimeLeft(prev => {
+         if(prev<=1) { setActive(false); return 0; } return prev-1;
+    }), 1000);
+    const f = setInterval(() => {
+       if(Math.random() < 0.1) setNotes(p => [...p, { id: Date.now(), lane: Math.floor(Math.random()*3), y: -10 }]);
+       setNotes(p => p.map(n => ({...n, y: n.y + 5})).filter(n => n.y < 110));
+    }, 100);
+    return () => { clearInterval(t); clearInterval(f); }
+  }, [active]);
+
+  const tap = (lane: number) => {
+    if(!active) return;
+    const hit = notes.find(n => n.lane === lane && n.y > 70 && n.y < 95);
+    if(hit) {
+        SoundEngine.playCoin();
+        setScore(s => s+10);
+        setNotes(p => p.filter(n => n.id !== hit.id));
+    }
+  };
+
+  return (
+    <div className="w-full h-60 bg-gray-900 relative flex flex-col items-center">
+       <div className="text-white w-full flex justify-between px-2"><span>Time: {timeLeft}</span><span>Score: {score}</span></div>
+       <div className="flex-1 w-full flex justify-around relative">
+          {[0,1,2].map(l => (
+             <div key={l} className="h-full w-16 border-x border-gray-700 relative">
+                <div className="absolute bottom-4 w-full h-8 bg-white/20"></div>
+                <button className="absolute bottom-0 w-full h-12 bg-purple-600 opacity-50 active:opacity-100" onClick={()=>tap(l)}></button>
+             </div>
+          ))}
+          {notes.map(n => (
+            <div key={n.id} className="absolute w-8 h-8" style={{ left: `${n.lane*33 + 10}%`, top: `${n.y}%` }}><ProceduralIcon type="NOTE" size={24}/></div>
+          ))}
+       </div>
+       {!active && <button className="absolute inset-0 bg-black/80 text-white" onClick={()=>onComplete('WIN', 'RHYTHM')}>DONE (Score: {score})</button>}
+    </div>
+  );
+};
+
 const MiniGameModal = ({ onClose, onComplete, onPlayToy }: any) => {
     const [activeGame, setActiveGame] = useState<MiniGameType>('NONE');
 
@@ -739,6 +920,8 @@ const MiniGameModal = ({ onClose, onComplete, onPlayToy }: any) => {
             case 'MATH': return <MathGame onComplete={onComplete} />;
             case 'MEMORY': return <MemoryGame onComplete={onComplete} />;
             case 'TARGET': return <TargetGame onComplete={onComplete} />;
+            case 'RUNNER': return <RunnerGame onComplete={onComplete} />;
+            case 'RHYTHM': return <RhythmGame onComplete={onComplete} />;
             default: return null;
         }
     };
@@ -756,27 +939,24 @@ const MiniGameModal = ({ onClose, onComplete, onPlayToy }: any) => {
                 </div>
 
                 {activeGame === 'NONE' ? (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
                         <button onClick={onPlayToy} className="border border-yellow-500 p-3 text-yellow-500 animate-pulse flex flex-col items-center">
                             <span className="material-symbols-outlined mb-1">sports_soccer</span>
                             <span className="text-xs">TOP YAKALAMA</span>
                         </button>
-                        <button onClick={()=>setActiveGame('RPS')} className="border border-gray-500 p-3 hover:bg-white/10 flex flex-col items-center">
-                            <span className="text-lg">✊✋✌️</span>
-                            <span className="text-xs">TAŞ KAĞIT MAKAS</span>
-                        </button>
-                        <button onClick={()=>setActiveGame('MATH')} className="border border-gray-500 p-3 hover:bg-white/10 flex flex-col items-center">
-                            <span className="text-lg">1 + 2 = ?</span>
-                            <span className="text-xs">MATEMATİK</span>
-                        </button>
-                        <button onClick={()=>setActiveGame('MEMORY')} className="border border-gray-500 p-3 hover:bg-white/10 flex flex-col items-center">
-                            <span className="material-symbols-outlined mb-1">grid_view</span>
-                            <span className="text-xs">HAFIZA</span>
-                        </button>
-                        <button onClick={()=>setActiveGame('TARGET')} className="border border-gray-500 p-3 hover:bg-white/10 flex flex-col items-center">
-                            <span className="material-symbols-outlined mb-1">ads_click</span>
-                            <span className="text-xs">HEDEF VUR</span>
-                        </button>
+                        {[
+                            {id:'RPS', name:'TAŞ KAĞIT MAKAS', icon:'✊'},
+                            {id:'MATH', name:'MATEMATİK', icon:'1+2'},
+                            {id:'MEMORY', name:'HAFIZA', icon:'grid_view'},
+                            {id:'TARGET', name:'HEDEF VUR', icon:'ads_click'},
+                            {id:'RUNNER', name:'KOŞU', icon:'directions_run'},
+                            {id:'RHYTHM', name:'RİTİM', icon:'music_note'},
+                        ].map(g => (
+                            <button key={g.id} onClick={()=>setActiveGame(g.id as MiniGameType)} className="border border-gray-500 p-3 hover:bg-white/10 flex flex-col items-center">
+                                <span className="material-symbols-outlined mb-1">{g.icon}</span>
+                                <span className="text-xs">{g.name}</span>
+                            </button>
+                        ))}
                     </div>
                 ) : (
                     <div className="border-2 border-gray-700 p-4 rounded bg-gray-900 min-h-[200px] flex items-center justify-center">
@@ -788,14 +968,242 @@ const MiniGameModal = ({ onClose, onComplete, onPlayToy }: any) => {
     );
 };
 
-// --- Main App Logic ---
+const GardenScreen = ({ gameState, onNavigate, onAction }: any) => {
+  return (
+    <div className="h-full bg-green-900 p-4 font-pixel text-white flex flex-col border-4 border-green-700">
+       <div className="flex justify-between items-center mb-4 border-b-2 border-green-500 pb-2">
+           <h2 className="text-xl text-green-300">BAHÇE</h2>
+           <button onClick={() => onNavigate(Screen.MAIN)} className="bg-red-500 px-2 py-1 text-xs">ÇIKIŞ</button>
+       </div>
+       
+       <div className="grid grid-cols-2 gap-4 mb-8">
+          {gameState.garden.map((plot: GardenPlot) => (
+             <div 
+               key={plot.id} 
+               onClick={() => onAction({ type: 'GARDEN_INTERACT', plotId: plot.id })}
+               className={`h-24 border-4 ${plot.isUnlocked ? 'border-green-600 bg-[#3a2820]' : 'border-gray-600 bg-gray-800'} flex flex-col items-center justify-center relative cursor-pointer active:scale-95 transition-transform`}
+             >
+                {!plot.isUnlocked ? (
+                   <span className="text-gray-500 text-xs text-center">KİLİTLİ<br/>(100G)</span>
+                ) : !plot.seedId ? (
+                   <span className="text-green-200 animate-pulse text-xs">EK (TOHUM SEÇ)</span>
+                ) : (
+                   <>
+                      {plot.stage === 0 && <div className="w-2 h-2 bg-yellow-200 rounded-full"></div>}
+                      {plot.stage === 1 && <div className="w-2 h-6 bg-green-400"></div>}
+                      {plot.stage === 2 && <div className="text-xl animate-bounce">🍎</div>}
+                      
+                      <div className="absolute bottom-1 w-3/4 h-1 bg-black">
+                         <div className="h-full bg-blue-400" style={{ width: `${plot.progress}%` }}></div>
+                      </div>
+                      
+                      {Date.now() - plot.lastWatered > 10000 && plot.stage < 2 && (
+                          <div className="absolute top-1 right-1 text-blue-300 text-xs animate-bounce">💧</div>
+                      )}
+                   </>
+                )}
+             </div>
+          ))}
+       </div>
+       <div className="text-[10px] text-center text-green-200 mt-auto">Tohumları Pazardan Al!</div>
+    </div>
+  );
+};
 
+const ArenaScreen = ({ gameState, onNavigate, onCompleteBattle }: any) => {
+    const [phase, setPhase] = useState<'START' | 'FIGHT' | 'RESULT'>('START');
+    const [turn, setTurn] = useState<'PLAYER' | 'ENEMY'>('PLAYER');
+    const [actionLog, setActionLog] = useState<string[]>(['Savaş Başladı!']);
+    const [playerHp, setPlayerHp] = useState(100);
+    const [enemyHp, setEnemyHp] = useState(100);
+    const [ap, setAp] = useState(3);
+    const [enemy, setEnemy] = useState({ name: 'Vahşi Yarasa', type: 'NATURE' as DragonType, maxHp: 100 });
+    const [critNext, setCritNext] = useState(false);
+
+    useEffect(() => {
+        const pMax = 50 + (gameState.dragon.stats.vit * 10);
+        setPlayerHp(pMax);
+        const eMax = 50 + (gameState.dragon.evolutionStage * 30);
+        const eTypes: DragonType[] = ['FIRE', 'ICE', 'NATURE'];
+        const eType = eTypes[Math.floor(Math.random() * 3)];
+        setEnemy({ name: `Vahşi ${eType === 'FIRE' ? 'Alev' : eType === 'ICE' ? 'Buz' : 'Yaprak'} Kanat`, type: eType, maxHp: eMax });
+        setEnemyHp(eMax);
+    }, []);
+
+    const getElementMult = (atk: DragonType, def: DragonType) => {
+        if(atk === 'FIRE' && def === 'NATURE') return 1.5;
+        if(atk === 'NATURE' && def === 'ICE') return 1.5;
+        if(atk === 'ICE' && def === 'FIRE') return 1.5;
+        if(atk === def) return 1.0;
+        return 0.8;
+    };
+
+    const playerAction = (action: 'ATTACK' | 'DEFEND' | 'FOCUS') => {
+        if(turn !== 'PLAYER') return;
+
+        let dmg = 0;
+        let log = '';
+
+        if(action === 'ATTACK') {
+            if(ap < 2) { setActionLog(p=>['Yetersiz AP!', ...p]); return; }
+            setAp(p => p - 2);
+            let mult = getElementMult(gameState.dragon.type, enemy.type);
+            let base = 5 + (gameState.dragon.stats.str * 1.5);
+            if(critNext) { base *= 2; setCritNext(false); mult *= 1.2; }
+            dmg = Math.floor(base * mult);
+            setEnemyHp(h => Math.max(0, h - dmg));
+            log = `Saldırdın! ${dmg} Hasar. ${mult > 1 ? '(Süper!)' : ''}`;
+            SoundEngine.playBattleHit();
+        } 
+        else if(action === 'DEFEND') {
+            if(ap < 1) { setActionLog(p=>['Yetersiz AP!', ...p]); return; }
+            setAp(p => p - 1);
+            log = 'Savunmaya geçtin!';
+            SoundEngine.playDefend();
+        }
+        else if(action === 'FOCUS') {
+            setAp(p => Math.min(5, p + 1));
+            setCritNext(true);
+            log = 'Odaklandın! (Kritik)';
+            SoundEngine.playCharge();
+        }
+
+        setActionLog(p => [log, ...p].slice(0, 4));
+
+        if(enemyHp - dmg <= 0) {
+            setTimeout(() => { SoundEngine.playBattleWin(); onCompleteBattle(true); }, 1000);
+        } else {
+            setTurn('ENEMY');
+            setTimeout(enemyTurn, 1500);
+        }
+    };
+
+    const enemyTurn = () => {
+        let dmg = 10 + (gameState.dragon.evolutionStage * 2);
+        if(actionLog[0].includes('Savunma')) dmg = Math.floor(dmg / 2);
+        
+        if(Math.random() * 100 < gameState.dragon.stats.agi) {
+            dmg = 0;
+            setActionLog(p => ['Düşman ISKALADI!', ...p].slice(0,4));
+        } else {
+            setPlayerHp(h => Math.max(0, h - dmg));
+            setActionLog(p => [`Düşman saldırdı! ${dmg} Hasar.`, ...p].slice(0,4));
+            if(dmg > 0) SoundEngine.playBattleHit();
+        }
+
+        if(playerHp - dmg <= 0) {
+             setTimeout(() => onCompleteBattle(false), 1000);
+        } else {
+            setTurn('PLAYER');
+            setAp(p => Math.min(5, p + 2));
+        }
+    };
+
+    return (
+        <div className="w-full h-full bg-slate-900 text-white font-pixel flex flex-col relative overflow-hidden border-4 border-red-900">
+            {/* Header */}
+            <div className="shrink-0 p-2 bg-black/40 flex justify-between items-start">
+                <div className="w-1/3">
+                    <div className="text-[10px] text-green-400 truncate">{gameState.dragon.name}</div>
+                    <div className="h-3 bg-gray-700 mt-1 border border-gray-500 relative">
+                        <div className="h-full bg-green-500 transition-all duration-500" style={{width: `${(playerHp/(50 + gameState.dragon.stats.vit*10))*100}%`}}></div>
+                    </div>
+                    <div className="flex gap-1 mt-1">
+                        {Array.from({length: ap}).map((_,i) => <div key={i} className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>)}
+                    </div>
+                </div>
+                
+                <div className="text-center">
+                    <div className="text-xl font-bold text-red-500 animate-pulse">VS</div>
+                    <div className="text-[8px] text-gray-400">{turn === 'PLAYER' ? 'Sıra Sende' : 'Bekle...'}</div>
+                </div>
+
+                <div className="w-1/3 text-right">
+                    <div className="text-[10px] text-red-400 truncate">{enemy.name}</div>
+                    <div className="h-3 bg-gray-700 mt-1 border border-gray-500 relative">
+                        <div className="h-full bg-red-500 transition-all duration-500" style={{width: `${(enemyHp/enemy.maxHp)*100}%`}}></div>
+                    </div>
+                </div>
+            </div>
+            
+            {/* Battle Area */}
+            <div className="flex-1 min-h-0 flex justify-between items-center px-4 relative">
+                 <div className={`scale-x-[-1] transition-transform duration-300 ${turn==='PLAYER'?'scale-110':''}`}>
+                     <ProceduralDragon 
+                        stage={gameState.dragon.stage} 
+                        type={gameState.dragon.type} 
+                        accessory={gameState.dragon.equippedAccessory}
+                        isSleeping={false} 
+                        scale={3} 
+                        animate={true}
+                     />
+                     {critNext && <div className="absolute -top-4 left-0 text-yellow-400 text-xs animate-bounce">KRİTİK!</div>}
+                 </div>
+
+                 <div className={`transition-transform duration-300 ${turn==='ENEMY'?'scale-110':''}`}>
+                     <ProceduralDragon 
+                        stage={DragonStage.ADULT}
+                        type={enemy.type}
+                        isSleeping={false}
+                        scale={3}
+                        animate={true}
+                        direction={-1}
+                     />
+                 </div>
+            </div>
+
+            {/* Bottom Controls */}
+            <div className="shrink-0 p-2 bg-slate-800 border-t-2 border-slate-600 relative z-10">
+                <div className="bg-black/50 p-1 h-12 overflow-hidden text-[9px] mb-2 border border-gray-600 rounded">
+                    {actionLog.map((l,i) => <div key={i} className={i===0?'text-white font-bold':'text-gray-400'}>{l}</div>)}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                    <button 
+                        onClick={() => playerAction('ATTACK')} 
+                        disabled={turn !== 'PLAYER' || ap < 2}
+                        className="bg-red-600 border-b-4 border-red-800 py-3 rounded active:translate-y-1 disabled:opacity-50 disabled:translate-y-0"
+                    >
+                        <div className="font-bold text-[10px]">SALDIR</div>
+                        <div className="text-[8px]">2 AP</div>
+                    </button>
+                    <button 
+                        onClick={() => playerAction('DEFEND')} 
+                        disabled={turn !== 'PLAYER' || ap < 1}
+                        className="bg-blue-600 border-b-4 border-blue-800 py-3 rounded active:translate-y-1 disabled:opacity-50 disabled:translate-y-0"
+                    >
+                        <div className="font-bold text-[10px]">SAVUN</div>
+                        <div className="text-[8px]">1 AP</div>
+                    </button>
+                    <button 
+                        onClick={() => playerAction('FOCUS')} 
+                        disabled={turn !== 'PLAYER'}
+                        className="bg-yellow-600 border-b-4 border-yellow-800 py-3 rounded active:translate-y-1 disabled:opacity-50 disabled:translate-y-0"
+                    >
+                        <div className="font-bold text-[10px]">ODAKLAN</div>
+                        <div className="text-[8px]">+1 AP</div>
+                    </button>
+                </div>
+            </div>
+            
+            {/* Start Overlay */}
+            {phase === 'START' && (
+                <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center">
+                    <h1 className="text-3xl text-red-500 mb-4 animate-pulse">SAVAŞ!</h1>
+                    <button onClick={() => setPhase('FIGHT')} className="bg-white text-black px-6 py-2 border-b-4 border-gray-400 active:translate-y-1">BAŞLA</button>
+                    <button onClick={() => onNavigate(Screen.MAIN)} className="mt-8 text-gray-400 text-xs">ÇIKIŞ</button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ... (Rest of Main App Logic - No changes needed)
 export default function App() {
   const [gameState, setGameState] = useState<GameState>({ ...INITIAL_GAME_STATE, dragon: { ...INITIAL_GAME_STATE.dragon, name: 'DRACO' } });
   const [hasSave, setHasSave] = useState(false);
   const [notifications, setNotifications] = useState<FloatingText[]>([]);
   
-  // State'ler
   const [npc, setNpc] = useState<NpcState | null>(null);
   const [homeUpgrades, setHomeUpgrades] = useState<HomeUpgrades>({ forest: false, cleanKit: false, weatherStation: false });
   const [quests, setQuests] = useState<DailyQuest[]>([
@@ -809,34 +1217,26 @@ export default function App() {
   useEffect(() => {
     const saved = localStorage.getItem('dragon_save_v2');
     if (saved) {
-      // Sadece kayıt var mı diye bak, otomatik yükleme yapma!
-      // const parsed = JSON.parse(saved);
-      // setGameState(parsed.gameState);
-      // if(parsed.upgrades) setHomeUpgrades(parsed.upgrades);
-      // if(parsed.quests) setQuests(parsed.quests);
       setHasSave(true);
     }
   }, []);
 
-  // --- NPC LOGIC ---
   useEffect(() => {
     const npcTimer = window.setInterval(() => {
       if (gameState.screen !== Screen.MAIN) return;
       if (npc) return;
-      if (Math.random() < 0.1) { // Increased chance slightly for demo
-        const types: NpcType[] = ['MOUSE', 'OWL', 'JOKER'];
+      if (Math.random() < 0.1) { 
+        const types: any[] = ['MOUSE', 'OWL', 'JOKER'];
         const t = types[Math.floor(Math.random() * types.length)];
         let msg = '';
         if (t === 'MOUSE') msg = 'Oynayalım mı?';
         if (t === 'OWL') msg = 'Hava güzel!';
         if (t === 'JOKER') msg = 'Sürpriz!';
-        // Random position between 20% and 80%
         setNpc({ type: t, message: msg, x: 20 + Math.random() * 60, y: 30 + Math.random() * 40 });
       }
     }, 15000);
     return () => clearInterval(npcTimer);
   }, [gameState.screen, npc]);
-  // ------------------------------------
 
   const addNotification = (text: string, color = '#21221d') => {
     const id = Date.now() + Math.random();
@@ -849,6 +1249,7 @@ export default function App() {
       prev.map((q) => {
           if (q.id === id && !q.completed) {
               addNotification("GÖREV TAMAMLANDI!", "#fbbf24");
+              SoundEngine.playCoin();
               return { ...q, completed: true };
           }
           return q;
@@ -896,25 +1297,49 @@ export default function App() {
             newWeather = 'SUNNY'; 
         }
         
-        // Random poop
         let newPoops = prev.dragon.poops;
         if(!isSleeping && newHunger < 80 && Math.random() < 0.002) {
             newPoops += 1;
         }
         
-        // Evolution Logic
         let newStage = prev.dragon.stage;
+        let newType = prev.dragon.type;
         const xp = prev.dragon.xp;
-        if(prev.dragon.stage === DragonStage.BABY && xp > 20) newStage = DragonStage.TEEN;
-        if(prev.dragon.stage === DragonStage.TEEN && xp > 60) newStage = DragonStage.ADULT;
-        if(prev.dragon.stage === DragonStage.ADULT && xp > 150) newStage = DragonStage.ELDER;
+        
+        if(prev.dragon.stage === DragonStage.BABY && xp > 20) {
+            newStage = DragonStage.TEEN;
+            SoundEngine.playEvolve();
+        }
+        else if(prev.dragon.stage === DragonStage.TEEN && xp > 60) {
+            newStage = DragonStage.ADULT;
+            const { str, int, vit } = prev.dragon.stats;
+            if (str >= int && str >= vit) newType = 'FIRE';
+            else if (int >= str && int >= vit) newType = 'ICE';
+            else newType = 'NATURE';
+            SoundEngine.playEvolve();
+        }
+        else if(prev.dragon.stage === DragonStage.ADULT && xp > 150) {
+            newStage = DragonStage.ELDER;
+            SoundEngine.playEvolve();
+        }
+        
+        const newGarden = prev.garden.map(plot => {
+            if(plot.seedId && plot.stage < 2) {
+                if(Date.now() - plot.lastWatered < 30000) { 
+                    return { ...plot, progress: Math.min(100, plot.progress + 2) };
+                }
+            }
+            return plot;
+        });
 
         return {
           ...prev,
           weather: newWeather,
+          garden: newGarden,
           dragon: {
             ...prev.dragon,
             stage: newStage,
+            type: newType,
             hunger: newHunger,
             energy: newEnergy,
             hygiene: newHygiene,
@@ -944,6 +1369,50 @@ export default function App() {
 
   const handleAction = (action: any) => {
     const type = typeof action === 'string' ? action : action.type;
+    SoundEngine.playCoin();
+    
+    if (type === 'GARDEN_INTERACT') {
+        setGameState(prev => {
+            const plot = prev.garden.find(p => p.id === action.plotId);
+            if(!plot) return prev;
+            
+            let newInv = { ...prev.inventory };
+            let newGarden = [...prev.garden];
+            let msg = '';
+            let newCurrency = prev.currency;
+
+            if(!plot.isUnlocked) {
+                if(prev.currency >= 100) {
+                    newCurrency -= 100;
+                    newGarden = newGarden.map(p => p.id === plot.id ? {...p, isUnlocked: true} : p);
+                    msg = 'KİLİT AÇILDI';
+                } else msg = '100G GEREKLİ';
+            } 
+            else if (!plot.seedId) {
+                const seed = ITEMS.find(i => i.type === 'SEED' && newInv[i.id] > 0);
+                if(seed) {
+                    newInv[seed.id]--;
+                    newGarden = newGarden.map(p => p.id === plot.id ? {...p, seedId: seed.id, stage: 0, progress: 0, lastWatered: Date.now()} : p);
+                    msg = 'EKİLDİ';
+                } else msg = 'TOHUM YOK';
+            }
+            else if (plot.progress >= 100) {
+                newInv['apple'] = (newInv['apple'] || 0) + 1;
+                newGarden = newGarden.map(p => p.id === plot.id ? {...p, seedId: null, stage: 0, progress: 0} : p);
+                msg = '+1 ELMA';
+                SoundEngine.playEat();
+            }
+            else {
+                newGarden = newGarden.map(p => p.id === plot.id ? {...p, lastWatered: Date.now()} : p);
+                msg = 'SULANDI';
+            }
+            
+            addNotification(msg, '#facc15');
+            return { ...prev, inventory: newInv, garden: newGarden, currency: newCurrency };
+        });
+        return;
+    }
+
     setGameState((prev) => {
       const d = { ...prev.dragon };
       let inv = { ...prev.inventory };
@@ -952,17 +1421,13 @@ export default function App() {
       if (type === 'USE_ITEM') {
         const item = action.item as Item;
         if (inv[item.id] > 0) {
-          // Eğer top ise miktar düşmüyoruz, oynanabilir bir eşya
-          if(item.type !== 'TOY') {
-             inv[item.id]--;
-          }
+          if(item.type !== 'TOY') { inv[item.id]--; }
           
           if(item.type === 'FOOD') {
               d.hunger = Math.min(100, d.hunger + (item.effect.hunger || 0));
               d.health = Math.min(100, d.health + (item.effect.health || 0));
+              SoundEngine.playEat();
               addNotification('YEDİ', '#16a34a');
-          } else if(item.type === 'TOY') {
-               // Toy logic handled in MainScreen via ActiveToy state
           }
           d.happiness = Math.min(100, d.happiness + (item.effect.happiness || 0));
           d.energy = Math.min(100, d.energy + (item.effect.energy || 0));
@@ -973,6 +1438,7 @@ export default function App() {
           if (Math.random() < 0.2) {
             currency += 50;
             addNotification('ALTIN BULDUN!', '#facc15');
+            SoundEngine.playCoin();
           } else {
             addNotification('TERTEMİZ!', '#0ea5e9');
           }
@@ -1005,13 +1471,9 @@ export default function App() {
       let energyCost = 10;
       let xpGain = 10;
 
-      if (result === 'WIN') { bonusGold = 50; mood = 20; xpGain = 20; } 
+      if (result === 'WIN') { bonusGold = 50; mood = 20; xpGain = 20; SoundEngine.playCoin(); } 
       else if (result === 'DRAW') { bonusGold = 20; mood = 10; xpGain = 10; } 
       else { bonusGold = 5; mood = 5; xpGain = 5; }
-
-      if (prev.dragon.equippedAccessory === 'headphones') bonusGold = Math.floor(bonusGold * 1.3);
-      if (prev.dragon.equippedAccessory === 'horn') xpGain = Math.floor(xpGain * 1.3);
-      if (prev.dragon.equippedAccessory === 'crown') mood = Math.floor(mood * 1.2);
 
       const newHappiness = Math.min(100, prev.dragon.happiness + mood);
       if (result === 'WIN') completeQuest('WIN_MINIGAME');
@@ -1036,6 +1498,7 @@ export default function App() {
 
   const handleNpcClick = () => {
       if(!npc) return;
+      SoundEngine.playCoin();
       if(npc.type === 'MOUSE') {
           setGameState(prev => ({ ...prev, currency: prev.currency + 100 }));
           addNotification("+100 ALTIN", "#facc15");
@@ -1052,11 +1515,13 @@ export default function App() {
   const handleClaimQuest = (id: DailyQuestId) => {
       setQuests(prev => prev.map(q => q.id === id ? { ...q, rewardClaimed: true } : q));
       setGameState(prev => ({ ...prev, currency: prev.currency + 100 }));
+      SoundEngine.playCoin();
       addNotification("GÖREV ÖDÜLÜ +100G", "#facc15");
   };
 
   const handleBuyUpgrade = (type: keyof HomeUpgrades, cost: number) => {
       if(gameState.currency >= cost) {
+          SoundEngine.playCoin();
           setGameState(prev => ({ ...prev, currency: prev.currency - cost }));
           setHomeUpgrades(prev => ({ ...prev, [type]: true }));
           addNotification("EV GELİŞTİRİLDİ!", "#16a34a");
@@ -1067,8 +1532,12 @@ export default function App() {
 
   if (gameState.screen === Screen.START) return <StartScreen onStart={() => setGameState(prev => ({ ...prev, screen: Screen.HATCH }))} onContinue={() => { const s = localStorage.getItem('dragon_save_v2'); if(s) { const p=JSON.parse(s); setGameState(p.gameState); setHomeUpgrades(p.upgrades); setQuests(p.quests); } }} hasSave={hasSave} />;
   if (gameState.dragon.stage === DragonStage.EGG) return <HatchingScreen onHatchTick={() => setTimeout(() => setGameState(prev => ({ ...prev, dragon: { ...prev.dragon, stage: DragonStage.BABY } })), 500)} />;
-  if (gameState.screen === Screen.MARKET) return <MarketScreen gameState={gameState} upgrades={homeUpgrades} onBuy={(i:Item) => { if(gameState.currency>=i.price){ setGameState(p=>({...p,currency:p.currency-i.price,inventory:{...p.inventory,[i.id]:(p.inventory[i.id]||0)+1}})); addNotification("ALINDI","#facc15");}}} onBuyUpgrade={handleBuyUpgrade} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} />;
+  if (gameState.screen === Screen.MARKET) return <MarketScreen gameState={gameState} upgrades={homeUpgrades} onBuy={(i:Item) => { if(gameState.currency>=i.price){ setGameState(p=>({...p,currency:p.currency-i.price,inventory:{...p.inventory,[i.id]:(p.inventory[i.id]||0)+1}})); addNotification("ALINDI","#facc15"); SoundEngine.playCoin();}}} onBuyUpgrade={handleBuyUpgrade} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} />;
   if (gameState.screen === Screen.STATS) return <StatsScreen gameState={gameState} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} />;
+  if (gameState.screen === Screen.GARDEN) return <GardenScreen gameState={gameState} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} onAction={handleAction} />;
+  if (gameState.screen === Screen.ARENA) return <ArenaScreen gameState={gameState} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} onCompleteBattle={(win:boolean) => { 
+      setGameState(p=>({...p,screen:Screen.MAIN, currency: p.currency + (win?50:10)})); addNotification(win?"ZAFER! +50G":"YENİLGİ +10G", win?"#facc15":"#ef4444");
+  }} />;
 
   return (
       <MainGameScreen 
@@ -1078,7 +1547,7 @@ export default function App() {
         onNpcClick={handleNpcClick}
         onAction={handleAction} 
         onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} 
-        onPet={() => { setGameState(p => ({ ...p, dragon: { ...p.dragon, happiness: Math.min(100, p.dragon.happiness + 5) } })); addNotification('<3', '#f472b6'); }} 
+        onPet={() => { setGameState(p => ({ ...p, dragon: { ...p.dragon, happiness: Math.min(100, p.dragon.happiness + 5) } })); addNotification('<3', '#f472b6'); SoundEngine.playEat(); }} 
         notifications={notifications} 
         onMiniGameComplete={handleMiniGameComplete}
         quests={quests}
@@ -1088,19 +1557,17 @@ export default function App() {
   );
 }
 
-// --- Main Game Screen (Movement & Physics) ---
+// ... (MainGameScreen, MarketScreen, etc. - No changes needed)
 const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications, onMiniGameComplete, upgrades, npc, onNpcClick, quests, onClaimQuest, addNotification }: any) => {
   const { dragon, weather } = gameState;
   const [showInventory, setShowInventory] = useState(false);
   const [showMiniGame, setShowMiniGame] = useState(false);
   const [showQuests, setShowQuests] = useState(false);
   
-  // Physics State
-  const [dracoPos, setDracoPos] = useState({ x: 50, y: 50 }); // Percentage
+  const [dracoPos, setDracoPos] = useState({ x: 50, y: 50 });
   const [targetPos, setTargetPos] = useState({ x: 50, y: 50 });
   const [activeToy, setActiveToy] = useState<{ id: string, x: number, y: number } | null>(null);
   
-  // Game Loop for Movement
   useEffect(() => {
       let animFrame: number;
       const updatePosition = () => {
@@ -1109,7 +1576,7 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
               const dy = targetPos.y - prev.y;
               const dist = Math.sqrt(dx*dx + dy*dy);
               
-              if(dist < 0.5) return prev; // Arrived
+              if(dist < 0.5) return prev;
               
               const speed = 0.5 + (dragon.energy > 50 ? 0.2 : 0);
               const moveX = (dx / dist) * speed;
@@ -1118,37 +1585,29 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
               return { x: prev.x + moveX, y: prev.y + moveY };
           });
           
-          // Toy collision logic
           if(activeToy) {
               const dist = Math.sqrt(Math.pow(activeToy.x - dracoPos.x, 2) + Math.pow(activeToy.y - dracoPos.y, 2));
-              if(dist < 5) { // caught it
+              if(dist < 5) {
                   setActiveToy(null);
-                  onPet(); // Bonus happiness
-                  
-                  if (activeToy.id === 'flame_show') {
-                      addNotification("HARİKA ŞOV!", "#f97316");
-                  }
+                  onPet();
+                  SoundEngine.playCoin();
+                  if (activeToy.id === 'flame_show') addNotification("HARİKA ŞOV!", "#f97316");
               }
           }
-
           animFrame = requestAnimationFrame(updatePosition);
       };
       animFrame = requestAnimationFrame(updatePosition);
       return () => cancelAnimationFrame(animFrame);
   }, [targetPos, activeToy, dragon.energy]);
 
-  // Screen Click -> Move
   const handleScreenClick = (e: React.MouseEvent<HTMLDivElement>) => {
       const rect = e.currentTarget.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / rect.width) * 100;
       const y = ((e.clientY - rect.top) / rect.height) * 100;
-      
       if (activeToy) {
-          // Move toy to new position
           setActiveToy({ ...activeToy, x, y });
           setTargetPos({ x, y });
       } else {
-          // Just fly there
           setTargetPos({ x, y });
       }
   };
@@ -1160,13 +1619,11 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
       setShowMiniGame(false);
   };
   
-  // Helper to get image for active toy
   const getToyImage = (id: string) => {
       const item = ITEMS.find(i => i.id === id);
       return item ? item.image : 'BALL';
   };
   
-  // Hareket kontrolü
   const dx = targetPos.x - dracoPos.x;
   const dy = targetPos.y - dracoPos.y;
   const isMoving = Math.sqrt(dx*dx + dy*dy) > 0.5;
@@ -1177,7 +1634,6 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
       <WeatherOverlay weather={weather} />
       <FloatingTextOverlay items={notifications} />
 
-      {/* NPC */}
       {npc && (
           <button 
             onClick={(e) => { e.stopPropagation(); onNpcClick(); }}
@@ -1189,7 +1645,6 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
           </button>
       )}
       
-      {/* Active Toy */}
       {activeToy && (
           <div className="absolute z-10 transition-all duration-300 ease-out" style={{ left: `${activeToy.x}%`, top: `${activeToy.y}%`, transform: 'translate(-50%, -50%)' }}>
                <ProceduralIcon 
@@ -1200,7 +1655,6 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
           </div>
       )}
 
-      {/* HUD */}
       <div className="flex justify-between items-start mb-4 relative z-30 pointer-events-none">
         <div className="flex flex-col gap-2 w-1/2">
           <StatBar icon="nutrition" value={dragon.hunger} />
@@ -1212,9 +1666,7 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
         </div>
       </div>
 
-      {/* Draco Layer */}
       <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
-         {/* Poops */}
          {Array.from({length: dragon.poops}).map((_, i) => (
              <div key={i} className="absolute text-xl" style={{ bottom: '20%', left: `${20 + i*15}%` }}>💩</div>
          ))}
@@ -1231,7 +1683,8 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
          >
             <div onClick={(e) => { e.stopPropagation(); onPet(); }} className="w-full h-full cursor-pointer pointer-events-auto">
                 <ProceduralDragon 
-                    stage={dragon.stage} // Pass DragonStage Enum
+                    stage={dragon.stage}
+                    type={dragon.type}
                     mode={dragon.isSleeping ? 'sleepy' : 'idle'} 
                     accessory={dragon.equippedAccessory} 
                     direction={targetPos.x < dracoPos.x ? -1 : 1}
@@ -1242,12 +1695,13 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
          </div>
       </div>
 
-      {/* Controls */}
       <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-2 z-40 pointer-events-auto">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center bg-black/20 p-1 rounded backdrop-blur-sm">
             <div className="flex gap-2">
             <button onClick={(e) => {e.stopPropagation(); onNavigate(Screen.STATS);}} className="hover:bg-black/10 p-1 rounded"><span className="material-symbols-outlined">bar_chart</span></button>
             <button onClick={(e) => {e.stopPropagation(); onNavigate(Screen.MARKET);}} className="hover:bg-black/10 p-1 rounded"><span className="material-symbols-outlined">storefront</span></button>
+            <button onClick={(e) => {e.stopPropagation(); onNavigate(Screen.GARDEN);}} className="hover:bg-black/10 p-1 rounded text-green-300"><span className="material-symbols-outlined">potted_plant</span></button>
+            <button onClick={(e) => {e.stopPropagation(); onNavigate(Screen.ARENA);}} className="hover:bg-black/10 p-1 rounded text-red-300"><span className="material-symbols-outlined">swords</span></button>
             <button onClick={(e) => {e.stopPropagation(); setShowQuests(true);}} className="hover:bg-black/10 p-1 rounded relative">
                 <span className="material-symbols-outlined">assignment</span>
                 {quests.some((q:any) => q.completed && !q.rewardClaimed) && <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full animate-ping"/>}
@@ -1293,7 +1747,7 @@ const MarketScreen = ({ gameState, onBuy, onNavigate, upgrades, onBuyUpgrade }: 
       {tab === 'ITEMS' && (
           <>
             <div className="flex gap-1 mb-2 overflow-x-auto">
-                {['FOOD','TOY','ACCESSORY'].map(t => <button key={t} onClick={() => setSubTab(t)} className={`text-[10px] px-2 border ${subTab===t?'bg-gray-700':''}`}>{t}</button>)}
+                {['FOOD','TOY','ACCESSORY','SEED'].map(t => <button key={t} onClick={() => setSubTab(t)} className={`text-[10px] px-2 border ${subTab===t?'bg-gray-700':''}`}>{t}</button>)}
             </div>
             <div className="grid grid-cols-2 gap-4 overflow-y-auto pb-4 pr-1">
                 {ITEMS.filter(i => i.type === subTab).map(item => (
@@ -1346,24 +1800,20 @@ const MarketScreen = ({ gameState, onBuy, onNavigate, upgrades, onBuyUpgrade }: 
   );
 };
 
-// Start Screen, Hatching Screen, StatBar, Clouds, WeatherOverlay, MiniGameModal, InventoryModal, StatsScreen
 const StartScreen = ({ onStart, onContinue, hasSave }: any) => (
   <LcdScreen className="flex flex-col items-center justify-center relative overflow-hidden bg-[#21221d]">
     <div className="z-10 flex flex-col items-center gap-6">
        <h1 className="text-4xl text-[#ef4444] font-pixel text-center leading-relaxed drop-shadow-md tracking-wider">
          Draco the<br/>Pixel Dragon
        </h1>
-       
        <div className="w-32 h-32 relative animate-bounce-pixel">
          <ProceduralDragon stage="adult" mode="idle" animate={true} />
        </div>
-
        <div className="flex flex-col gap-4 w-48">
           <PixelButton onClick={onStart} variant="primary">YENİ OYUN</PixelButton>
           <PixelButton onClick={onContinue} disabled={!hasSave}>DEVAM ET</PixelButton>
        </div>
-       
-       <div className="text-[10px] text-gray-500 mt-4 font-pixel">v1.2.0 Pixel Edition</div>
+       <div className="text-[10px] text-gray-500 mt-4 font-pixel">v1.3.0 Mega Update</div>
     </div>
   </LcdScreen>
 );
@@ -1371,7 +1821,7 @@ const HatchingScreen = ({ onHatchTick }: any) => {
     const [shake, setShake] = useState(false);
     return (
     <LcdScreen className="flex flex-col items-center justify-center">
-        <div onClick={() => { setShake(true); onHatchTick(); setTimeout(()=>setShake(false),200); }} className={`cursor-pointer ${shake ? 'animate-bounce' : ''}`}>
+        <div onClick={() => { setShake(true); onHatchTick(); SoundEngine.playJump(); setTimeout(()=>setShake(false),200); }} className={`cursor-pointer ${shake ? 'animate-bounce' : ''}`}>
             <ProceduralIcon type="EGG" size={64} />
             <div className="mt-4 text-center text-xs animate-pulse">DOKUN!</div>
         </div>
@@ -1404,10 +1854,17 @@ const InventoryModal = ({ inventory, onSelect, onClose }: any) => {
 const StatsScreen = ({ gameState, onNavigate }: any) => (
     <div className="h-full bg-[#d4b4b4] border-8 border-black p-4 flex flex-col">
         <h2 className="text-center text-xl font-bold mb-4">{gameState.dragon.name}</h2>
-        <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="flex-1 flex flex-col items-center justify-center gap-2">
              <ProceduralIcon type="EGG" size={64} className="mb-4 mix-blend-multiply opacity-50"/> 
+             <div className="text-sm font-bold">TÜR: {gameState.dragon.type}</div>
              <div className="text-sm">LVL: {gameState.dragon.evolutionStage}</div>
              <div className="text-sm">XP: {Math.floor(gameState.dragon.xp)}/{gameState.dragon.maxXp}</div>
+             <div className="grid grid-cols-2 gap-4 mt-4 text-xs">
+                 <div>STR: {gameState.dragon.stats.str}</div>
+                 <div>INT: {gameState.dragon.stats.int}</div>
+                 <div>VIT: {gameState.dragon.stats.vit}</div>
+                 <div>AGI: {gameState.dragon.stats.agi}</div>
+             </div>
         </div>
         <button onClick={()=>onNavigate(Screen.MAIN)} className="bg-black text-[#d4b4b4] p-3">GERİ</button>
     </div>
