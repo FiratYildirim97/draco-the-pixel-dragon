@@ -7,10 +7,7 @@ import {
   Screen,
   WeatherType,
   Accessory,
-  DragonSkin,
-  HomeUpgrade,
-  MiniGameType,
-  DailyQuestType,
+  DailyQuest,
 } from './types';
 
 export const ITEMS: Item[] = [
@@ -166,7 +163,7 @@ export const INITIAL_GAME_STATE: GameState = {
     apple: 2,
     steak: 1,
     ball: 1,
-    seed_apple: 1, // Başlangıç hediyesi
+    seed_apple: 1,
   },
 
   garden: [
@@ -182,7 +179,7 @@ export const INITIAL_GAME_STATE: GameState = {
     miniGameGoldMultiplier: 1,
   },
 
-  dailyQuests: [],
+  dailyQuests: [], // Will be populated by App
   lastQuestDate: null,
   dailyStreak: 0,
 
@@ -198,6 +195,10 @@ export const INITIAL_GAME_STATE: GameState = {
   activeNpc: undefined,
 
   visualEffects: [],
+  
+  settings: {
+    muted: false
+  }
 };
 
 export const ACCESSORIES: Accessory[] = [
@@ -259,40 +260,14 @@ export const ACCESSORIES: Accessory[] = [
   },
 ];
 
-export const DAILY_QUEST_POOL = [
-  {
-    id: 'FEED_ONCE',
-    type: 'FEED_ONCE',
-    description: 'Draco’yu bir kez besle.',
-    target: 1,
-    rewardGold: 10,
-    rewardXp: 20,
-  },
-  {
-    id: 'WASH_DRAGON_ONCE',
-    type: 'WASH_DRAGON_ONCE',
-    description: 'Draco’yu 1 defa yıka.',
-    target: 1,
-    rewardGold: 15,
-    rewardXp: 25,
-    rewardSkinShards: 1,
-  },
-  {
-    id: 'WIN_MINIGAME_ONCE',
-    type: 'WIN_MINIGAME_ONCE',
-    description: '1 mini oyun kazan.',
-    target: 1,
-    rewardGold: 20,
-    rewardXp: 30,
-    rewardSkinShards: 2,
-  },
-  {
-    id: 'REACH_HAPPINESS_80',
-    type: 'REACH_HAPPINESS_80',
-    description: 'Mutluluğu 80 üzerine çıkar.',
-    target: 1,
-    rewardGold: 15,
-    rewardXp: 25,
-    rewardSkinShards: 1,
-  },
+// Expanded Quest Pool
+export const QUEST_DEFINITIONS = [
+  { targetType: 'WASH', targetCount: 1, text: 'Draco\'yu 1 kez yıka', rewardGold: 20 },
+  { targetType: 'FEED', targetCount: 2, text: 'Draco\'yu 2 kez besle', rewardGold: 30 },
+  { targetType: 'WIN_MINIGAME', targetCount: 1, text: '1 mini oyun kazan', rewardGold: 50 },
+  { targetType: 'HAPPY_80', targetCount: 1, text: 'Mutluluğu 80+ yap', rewardGold: 40 },
+  { targetType: 'SLEEP', targetCount: 1, text: 'Draco\'yu uyut', rewardGold: 15 },
+  { targetType: 'GARDEN_WATER', targetCount: 1, text: 'Bahçeyi sula', rewardGold: 25 },
+  { targetType: 'BATTLE_PLAY', targetCount: 1, text: 'Arenada savaş', rewardGold: 40 },
+  { targetType: 'PET', targetCount: 5, text: 'Draco\'yu 5 kez sev', rewardGold: 10 },
 ];

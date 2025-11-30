@@ -6,8 +6,8 @@ export enum Screen {
   MAIN = 'MAIN',
   MARKET = 'MARKET',
   STATS = 'STATS',
-  GARDEN = 'GARDEN', // Yeni
-  ARENA = 'ARENA',   // Yeni
+  GARDEN = 'GARDEN',
+  ARENA = 'ARENA',
 }
 
 export enum DragonStage {
@@ -18,19 +18,18 @@ export enum DragonStage {
   ELDER = 'ELDER',
 }
 
-// Yeni: Ejderha element türleri
 export type DragonType = 'NORMAL' | 'FIRE' | 'ICE' | 'NATURE';
 
 export type WeatherType = 'SUNNY' | 'RAIN';
 
-export type ItemType = 'FOOD' | 'TOY' | 'ACCESSORY' | 'SEED'; // Seed eklendi
+export type ItemType = 'FOOD' | 'TOY' | 'ACCESSORY' | 'SEED';
 
 export interface ItemEffect {
   hunger?: number;
   happiness?: number;
   energy?: number;
   health?: number;
-  stats?: Partial<Stats>; // Kalıcı stat bonusları
+  stats?: Partial<Stats>;
 }
 
 export interface Item {
@@ -38,21 +37,21 @@ export interface Item {
   name: string;
   type: ItemType;
   price: number;
-  image: string; // PIXEL_ART key
+  image: string;
   effect: ItemEffect;
 }
 
 export interface Stats {
-  str: number; // Güç
-  vit: number; // Can
-  int: number; // Zeka
-  agi: number; // Hız
+  str: number;
+  vit: number;
+  int: number;
+  agi: number;
 }
 
 export interface Dragon {
   name: string;
   stage: DragonStage;
-  type: DragonType; // Yeni
+  type: DragonType;
   evolutionStage: number;
   age: number;
 
@@ -73,12 +72,11 @@ export interface Dragon {
   stats: Stats;
 }
 
-// Bahçe Tarlası
 export interface GardenPlot {
   id: number;
   isUnlocked: boolean;
   seedId: string | null;
-  stage: 0 | 1 | 2 | 3; // 0:Tohum, 1:Filiz, 2:Meyve, 3:Çürük
+  stage: 0 | 1 | 2 | 3;
   progress: number;
   lastWatered: number;
 }
@@ -89,16 +87,16 @@ export interface PermanentBuffs {
   miniGameGoldMultiplier: number;
 }
 
+// Updated DailyQuest logic
 export interface DailyQuest {
   id: string;
-  description: string;
-  target: number;
-  progress: number;
-  rewardGold: number;
-  rewardXp: number;
+  text: string;
+  targetType: string; // e.g. 'WASH', 'FEED', 'WIN'
+  targetCount: number;
+  currentCount: number;
   completed: boolean;
-  type?: DailyQuestType;
-  rewardSkinShards?: number;
+  rewardClaimed: boolean;
+  rewardGold: number;
 }
 
 export interface GameState {
@@ -108,16 +106,14 @@ export interface GameState {
   currency: number;
   weather: WeatherType;
   
-  garden: GardenPlot[]; // Yeni
+  garden: GardenPlot[];
 
   buffs: PermanentBuffs;
 
   dailyQuests: DailyQuest[];
-  lastQuestDate: string | null;
-  dailyStreak: number;
-
+  lastQuestDate: string | null; // Used for daily reset or timer
+  
   activeMiniGame?: MiniGameType | null;
-  miniGameStreak?: number;
 
   activeSkinId?: string;
   unlockedSkins?: string[];
@@ -128,9 +124,12 @@ export interface GameState {
   activeNpc?: NpcState;
 
   visualEffects?: VisualEffect[];
+  
+  settings: {
+    muted: boolean;
+  };
 }
 
-// Tüm Mini Oyunlar
 export type MiniGameType =
   | 'RPS'
   | 'MATH'
@@ -138,9 +137,11 @@ export type MiniGameType =
   | 'TAP'
   | 'TARGET'
   | 'MEMORY'
-  | 'RUNNER' // Yeni
-  | 'RHYTHM' // Yeni
-  | 'FLAME_SHOW';
+  | 'RUNNER'
+  | 'RHYTHM'
+  | 'FLAME_SHOW'
+  | 'FALLING' // Yeni
+  | 'CLICKER'; // Yeni
 
 export interface Accessory {
   id: string;
@@ -151,20 +152,6 @@ export interface Accessory {
   color?: string;
 }
 
-export interface DragonSkin {
-  id: string;
-  name: string;
-  unlockLevel: number;
-  passive: {
-    type: 'CLEAN_DECAY' | 'MINIGAME_SPEED' | 'NONE';
-    value: number;
-  };
-  palette: {
-    base: string;
-    accent: string;
-  };
-}
-
 export interface HomeUpgrade {
   id: string;
   name: string;
@@ -173,18 +160,11 @@ export interface HomeUpgrade {
 }
 
 export interface NpcState {
-  type: 'MOUSE' | 'OWL' | 'JOKER';
+  type: 'MOUSE' | 'OWL' | 'JOKER' | 'MERCHANT' | 'BARD'; // Yeni NPC'ler
   message: string;
   x: number;
   y: number;
-  rewardType?: 'MINIGAME_INVITE' | 'WEATHER_INFO' | 'RANDOM_BUFF';
 }
-
-export type DailyQuestType =
-  | 'FEED_ONCE'
-  | 'WASH_DRAGON_ONCE'
-  | 'WIN_MINIGAME_ONCE'
-  | 'REACH_HAPPINESS_80';
 
 export interface VisualEffect {
   id: number;
