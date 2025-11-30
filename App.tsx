@@ -1,5 +1,3 @@
-// src/App.tsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GameState, Screen, DragonStage, Item, WeatherType, MiniGameType, NpcState, DragonType, GardenPlot, DailyQuest } from './types';
 import { ITEMS, INITIAL_GAME_STATE, QUEST_DEFINITIONS } from './constants';
@@ -165,6 +163,8 @@ const PIXEL_ART: Record<string, { grid: number[][]; palette: string[] }> = {
   }
 };
 
+// --- COMPONENTS ---
+
 const ProceduralIcon = ({ type, size = 32, className = '' }: any) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -192,6 +192,34 @@ const ProceduralIcon = ({ type, size = 32, className = '' }: any) => {
   }, [type, size]);
   return <canvas ref={canvasRef} className={`image-rendering-pixelated ${className}`} style={{ width: size, height: size }} />;
 };
+
+const PixelButton = ({ children, onClick, className = '', disabled = false, variant = 'default' }: any) => {
+    let s = 'bg-gray-200 border-4 border-gray-800 text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-100';
+    if(variant === 'primary') s = 'bg-[#ef4444] border-4 border-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:brightness-110';
+    return <button onClick={onClick} disabled={disabled} className={`relative font-pixel text-xs uppercase py-3 px-4 active:translate-y-1 ${s} ${className}`}>{children}</button>;
+};
+
+const LcdScreen = ({ children, className = '', isNight = false, onClick, upgrades }: any) => (
+  // FIXED: Mobile layout using fixed inset-0
+  <div className={`fixed inset-0 w-full h-full text-lcd-fg overflow-hidden relative font-pixel shadow-screen-inner transition-colors duration-1000 ${upgrades?.forest ? 'bg-[#3b5c3a]' : 'bg-lcd-bg'}`} onClick={onClick}>
+    <div className="absolute inset-0 pointer-events-none opacity-20 z-10 mix-blend-multiply" style={{ backgroundImage: 'linear-gradient(rgba(0,0,0, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0, 0.5) 1px, transparent 1px)', backgroundSize: '6px 6px' }} />
+    <div className={`absolute inset-0 bg-[#0f172a] mix-blend-multiply pointer-events-none z-20 transition-opacity duration-1000 ${isNight ? 'opacity-90' : 'opacity-0'}`} />
+    <div className={`relative z-0 h-full p-4 ${className}`}>{children}</div>
+  </div>
+);
+
+const StatBar = ({ icon, value, reverse = false }: any) => (
+    <div className={`flex items-center gap-1 w-full max-w-[120px] ${reverse ? 'flex-row-reverse' : ''}`}>
+      <span className="material-symbols-outlined text-lg">{icon}</span>
+      <div className="flex-1 h-4 border-2 border-lcd-fg p-[1px]"><div className="h-full bg-lcd-fg" style={{ width: `${Math.min(100, value)}%` }} /></div>
+    </div>
+);
+
+const Clouds = () => <div className="absolute inset-0 pointer-events-none opacity-30"><div className="absolute top-10 left-10 w-20 h-8 bg-white blur-md animate-pulse"></div></div>;
+const WeatherOverlay = ({ weather }: any) => weather === 'RAIN' ? <div className="absolute inset-0 bg-blue-500/20 pointer-events-none mix-blend-multiply" /> : null;
+const FloatingTextOverlay = ({ items }: any) => <div className="absolute inset-0 pointer-events-none z-50">{items.map((i:any) => <div key={i.id} style={{left:`${i.x}%`, top:`${i.y}%`, color:i.color}} className="absolute font-bold text-xs animate-bounce">{i.text}</div>)}</div>;
+
+// --- DRAGON RENDERER ---
 
 const DRAGON_SPRITES = {
   BABY: {
@@ -267,21 +295,336 @@ const ProceduralDragon = ({ stage, type='NORMAL', accessory, className = '', ani
     return <canvas ref={canvasRef} className={`image-rendering-pixelated w-full h-full object-contain ${className}`} style={flipStyle} />;
 };
 
-const PixelButton = ({ children, onClick, className = '', disabled = false, variant = 'default' }: any) => {
-    let s = 'bg-gray-200 border-4 border-gray-800 text-gray-900 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-gray-100';
-    if(variant === 'primary') s = 'bg-[#ef4444] border-4 border-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:brightness-110';
-    return <button onClick={onClick} disabled={disabled} className={`relative font-pixel text-xs uppercase py-3 px-4 active:translate-y-1 ${s} ${className}`}>{children}</button>;
-};
+// --- MODAL COMPONENT DEFINITIONS ---
 
-const LcdScreen = ({ children, className = '', isNight = false, onClick, upgrades }: any) => (
-  <div className={`w-full h-full text-lcd-fg overflow-hidden relative font-pixel shadow-screen-inner transition-colors duration-1000 ${upgrades?.forest ? 'bg-[#3b5c3a]' : 'bg-lcd-bg'}`} onClick={onClick}>
-    <div className="absolute inset-0 pointer-events-none opacity-20 z-10 mix-blend-multiply" style={{ backgroundImage: 'linear-gradient(rgba(0,0,0, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0, 0.5) 1px, transparent 1px)', backgroundSize: '6px 6px' }} />
-    <div className={`absolute inset-0 bg-[#0f172a] mix-blend-multiply pointer-events-none z-20 transition-opacity duration-1000 ${isNight ? 'opacity-90' : 'opacity-0'}`} />
-    <div className={`relative z-0 h-full p-4 ${className}`}>{children}</div>
-  </div>
+const QuestModal = ({ quests, onClaim, onClose }: { quests: DailyQuest[], onClaim: (id: string) => void, onClose: () => void }) => (
+    <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-lcd-bg border-4 border-lcd-fg p-3 w-full max-w-[280px] shadow-pixel">
+            <div className="flex justify-between items-center mb-2 border-b-2 border-lcd-fg pb-1">
+                <h3 className="text-sm font-pixel">GÜNLÜK GÖREVLER</h3>
+                <button onClick={onClose}>X</button>
+            </div>
+            <div className="space-y-2">
+                {quests.map(q => (
+                    <div key={q.id} className="border-2 border-black/20 p-2 flex justify-between items-center bg-white/10">
+                        <div className="text-[10px]">
+                            <div className={q.completed ? 'line-through opacity-50' : ''}>{q.text} ({q.currentCount}/{q.targetCount})</div>
+                            <div className="text-[9px] text-green-700">{q.rewardClaimed ? 'Tamamlandı' : q.completed ? 'Ödül Hazır!' : 'Devam Ediyor'}</div>
+                        </div>
+                        <button disabled={!q.completed || q.rewardClaimed} onClick={() => onClaim(q.id)} className="text-[9px] border-2 border-black px-1 py-1 bg-yellow-400 disabled:opacity-30 disabled:bg-gray-400">
+                             {q.rewardClaimed ? 'ALINDI' : `AL (${q.rewardGold}G)`}
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
 );
 
-// --- UPDATED BATTLE ARENA (Arena 2.1 - Fixed Defense) ---
+const InventoryModal = ({ inventory, onSelect, onClose }: any) => {
+    const items = ITEMS.filter(i => (inventory[i.id]||0)>0);
+    return (
+    <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-lcd-bg border-4 border-lcd-fg p-4 w-64 max-h-[80%] overflow-y-auto">
+            <div className="flex justify-between mb-2"><h3>ÇANTA</h3><button onClick={onClose}>X</button></div>
+            <div className="grid grid-cols-2 gap-2">
+                {items.length===0 && <div className="text-xs opacity-50">Boş...</div>}
+                {items.map(i => <button key={i.id} onClick={()=>onSelect(i)} className="border border-lcd-fg p-2 flex flex-col items-center"><ProceduralIcon type={i.image} size={24}/><span className="text-[10px]">{i.name} x{inventory[i.id]}</span></button>)}
+            </div>
+        </div>
+    </div>
+    );
+};
+
+// --- MINI GAMES ---
+
+const FallingGame = ({ onComplete }: any) => {
+    const [score, setScore] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(30);
+    const [playerX, setPlayerX] = useState(50);
+    const [items, setItems] = useState<{id:number, x:number, y:number, type:'GOOD'|'BAD'}[]>([]);
+    
+    useEffect(() => {
+        const timer = setInterval(() => setTimeLeft(t => t > 0 ? t - 1 : 0), 1000);
+        const spawner = setInterval(() => {
+            setItems(i => [...i, { id: Date.now(), x: Math.random() * 90 + 5, y: -10, type: Math.random() > 0.3 ? 'GOOD' : 'BAD' }]);
+        }, 800);
+        const looper = setInterval(() => {
+            setItems(prev => {
+                return prev.map(i => ({...i, y: i.y + 2})).filter(i => {
+                    if (i.y > 85 && i.y < 95 && Math.abs(i.x - playerX) < 10) {
+                        if(i.type === 'GOOD') { setScore(s=>s+10); SoundEngine.playCoin(); }
+                        else { setScore(s=>Math.max(0, s-20)); SoundEngine.playBattleHit(); }
+                        return false; 
+                    }
+                    return i.y < 100;
+                });
+            });
+        }, 50);
+        return () => { clearInterval(timer); clearInterval(spawner); clearInterval(looper); }
+    }, []); // Removed playerX dependency to avoid resets
+
+    useEffect(() => { if(timeLeft === 0) onComplete('WIN', 'FALLING'); }, [timeLeft]);
+
+    return (
+        <div className="w-full h-64 bg-sky-200 relative overflow-hidden border-4 border-black" onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setPlayerX(((e.clientX - rect.left) / rect.width) * 100);
+        }}>
+            <div className="absolute top-2 left-2">Score: {score}</div>
+            <div className="absolute top-2 right-2">Time: {timeLeft}</div>
+            {items.map(i => (
+                <div key={i.id} className="absolute text-2xl" style={{left:`${i.x}%`, top:`${i.y}%`}}>
+                    {i.type === 'GOOD' ? '🍎' : '🪨'}
+                </div>
+            ))}
+            <div className="absolute bottom-2 transition-all duration-100" style={{left:`${playerX}%`, transform:'translateX(-50%)'}}>
+                <ProceduralDragon stage={DragonStage.TEEN} scale={2} />
+            </div>
+        </div>
+    );
+};
+
+const ClickerGame = ({ onComplete }: any) => {
+    const [clicks, setClicks] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(10);
+    useEffect(() => {
+        const t = setInterval(() => setTimeLeft(prev => {
+            if(prev <= 1) { clearInterval(t); return 0; }
+            return prev - 1;
+        }), 1000);
+        return () => clearInterval(t);
+    }, []);
+    
+    useEffect(() => { if(timeLeft === 0) onComplete(clicks > 20 ? 'WIN' : 'LOSE', 'CLICKER'); }, [timeLeft]);
+
+    return (
+        <div className="flex flex-col items-center gap-4 py-8">
+            <div className="text-2xl">Süre: {timeLeft}</div>
+            <div className="text-xl">Tıklama: {clicks}</div>
+            <button 
+                onClick={() => { setClicks(c=>c+1); SoundEngine.playEat(); }}
+                className="bg-red-500 text-white w-32 h-32 rounded-full border-b-8 border-red-800 active:translate-y-2 active:border-b-0 text-xl font-bold"
+            >
+                TIKLA!
+            </button>
+        </div>
+    );
+};
+
+const RpsGame = ({ onComplete }: any) => {
+    const [status, setStatus] = useState<'PICK' | 'RESULT'>('PICK');
+    const [result, setResult] = useState<string>('');
+    const [pcMove, setPcMove] = useState('');
+    
+    const play = (choice: string) => {
+        const moves = ['TAŞ', 'KAĞIT', 'MAKAS'];
+        const pc = moves[Math.floor(Math.random() * 3)];
+        setPcMove(pc);
+        let res: 'WIN'|'LOSE'|'DRAW' = 'LOSE';
+        if(choice === pc) res = 'DRAW';
+        else if((choice === 'TAŞ' && pc === 'MAKAS') || (choice === 'KAĞIT' && pc === 'TAŞ') || (choice === 'MAKAS' && pc === 'KAĞIT')) res = 'WIN';
+        setResult(res); setStatus('RESULT');
+        setTimeout(() => onComplete(res, 'RPS'), 1500);
+    };
+
+    return (
+        <div className="flex flex-col items-center gap-4">
+            {status === 'PICK' ? (
+                <>
+                    <div className="text-sm">Seçimini Yap:</div>
+                    <div className="flex gap-2">
+                        <button onClick={()=>play('TAŞ')} className="border-2 border-white p-2 hover:bg-white/20">🪨 TAŞ</button>
+                        <button onClick={()=>play('KAĞIT')} className="border-2 border-white p-2 hover:bg-white/20">📄 KAĞIT</button>
+                        <button onClick={()=>play('MAKAS')} className="border-2 border-white p-2 hover:bg-white/20">✂️ MAKAS</button>
+                    </div>
+                </>
+            ) : (
+                <div className="text-center animate-bounce">
+                    <div className="text-xl">{pcMove}</div>
+                    <div className={`text-2xl font-bold ${result==='WIN'?'text-green-400':result==='LOSE'?'text-red-400':'text-yellow-400'}`}>{result === 'WIN' ? 'KAZANDIN!' : result === 'LOSE' ? 'KAYBETTİN' : 'BERABERE'}</div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const MathGame = ({ onComplete }: any) => {
+    const [question, setQuestion] = useState<{q:string, a:number} | null>(null);
+    const [options, setOptions] = useState<number[]>([]);
+    useEffect(() => {
+        const a = Math.floor(Math.random() * 20) + 1;
+        const b = Math.floor(Math.random() * 10) + 1;
+        const op = Math.random() > 0.5 ? '+' : '-';
+        const ans = op === '+' ? a+b : a-b;
+        setQuestion({ q: `${a} ${op} ${b} = ?`, a: ans });
+        const opts = new Set([ans]);
+        while(opts.size < 3) opts.add(ans + Math.floor(Math.random() * 10) - 5);
+        setOptions(Array.from(opts).sort(()=>Math.random()-0.5));
+    }, []);
+    const check = (val: number) => { if(question && val === question.a) onComplete('WIN', 'MATH'); else onComplete('LOSE', 'MATH'); };
+    if(!question) return <div>Yükleniyor...</div>;
+    return (
+        <div className="flex flex-col items-center gap-4">
+            <div className="text-2xl font-bold">{question.q}</div>
+            <div className="grid grid-cols-3 gap-2">{options.map((o,i) => <button key={i} onClick={()=>check(o)} className="border-2 border-white p-3 text-xl hover:bg-white/20">{o}</button>)}</div>
+        </div>
+    );
+};
+
+const MemoryGame = ({ onComplete }: any) => {
+    const [cards, setCards] = useState<{id:number, icon:string, flipped:boolean, matched:boolean}[]>([]);
+    const [flipped, setFlipped] = useState<number[]>([]);
+    useEffect(() => {
+        const icons = ['APPLE', 'BALL', 'HAT', 'STAR'];
+        const deck = [...icons, ...icons].sort(() => Math.random() - 0.5).map((icon, id) => ({ id, icon, flipped: false, matched: false }));
+        setCards(deck);
+    }, []);
+    const handleCardClick = (id: number) => {
+        if(flipped.length >= 2) return;
+        const cardIndex = cards.findIndex(c=>c.id===id);
+        if(cards[cardIndex].matched || cards[cardIndex].flipped) return;
+        const newCards = [...cards]; newCards[cardIndex].flipped = true; setCards(newCards);
+        const newFlipped = [...flipped, id]; setFlipped(newFlipped);
+        if(newFlipped.length === 2) {
+            const c1 = newCards.find(c=>c.id===newFlipped[0]);
+            const c2 = newCards.find(c=>c.id===newFlipped[1]);
+            if(c1 && c2 && c1.icon === c2.icon) {
+                setTimeout(() => { setCards(curr => { const next = curr.map(c => (c.id === c1.id || c.id === c2.id) ? {...c, matched: true} : c); if(next.every(c=>c.matched)) setTimeout(()=>onComplete('WIN', 'MEMORY'), 500); return next; }); setFlipped([]); }, 500);
+            } else {
+                setTimeout(() => { setCards(curr => curr.map(c => (c.id === newFlipped[0] || c.id === newFlipped[1]) ? {...c, flipped: false} : c)); setFlipped([]); }, 1000);
+            }
+        }
+    };
+    return (
+        <div className="grid grid-cols-4 gap-2">{cards.map(c => <button key={c.id} onClick={()=>handleCardClick(c.id)} className={`w-10 h-10 border flex items-center justify-center bg-black/50 ${c.flipped || c.matched ? 'bg-white/20' : ''}`}>{(c.flipped || c.matched) ? <ProceduralIcon type={c.icon} size={24} /> : '?'}</button>)}</div>
+    );
+};
+
+const TargetGame = ({ onComplete }: any) => {
+    const [pos, setPos] = useState({x:50, y:50});
+    const [score, setScore] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(5);
+    useEffect(() => {
+        const t = setInterval(() => {
+            setTimeLeft(prev => { if(prev <= 1) { clearInterval(t); onComplete(score >= 3 ? 'WIN' : 'LOSE', 'TARGET'); return 0; } return prev - 1; });
+        }, 1000);
+        return () => clearInterval(t);
+    }, []); // Removed score dependency to fix timer reset
+    useEffect(() => { if(timeLeft === 0) onComplete(score >= 3 ? 'WIN' : 'LOSE', 'TARGET'); }, [timeLeft]);
+
+    const hit = () => { setScore(s => s+1); setPos({x: Math.random()*80+10, y: Math.random()*80+10}); SoundEngine.playCoin(); };
+    return (
+        <div className="relative w-full h-40 border border-white/20 bg-black/50 overflow-hidden">
+            <div className="absolute top-1 left-1 text-xs">Süre: {timeLeft} | Skor: {score}</div>
+            <button onMouseDown={(e)=>{e.stopPropagation(); hit();}} className="absolute w-8 h-8 flex items-center justify-center bg-red-500 rounded-full animate-pulse" style={{left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%,-50%)'}}>🎯</button>
+        </div>
+    );
+};
+
+const RunnerGame = ({ onComplete }: any) => {
+  const [score, setScore] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const [dracoY, setDracoY] = useState(0);
+  const [obstacles, setObstacles] = useState<number[]>([]);
+  const tickRef = useRef(0);
+  const animRef = useRef(0);
+  const jump = () => { if (dracoY === 0) { SoundEngine.playJump(); let velocity = 15; const jumpInterval = setInterval(() => { setDracoY((prev) => { const next = prev + velocity; velocity -= 1.5; if (next <= 0) { clearInterval(jumpInterval); return 0; } return next; }); }, 30); } };
+  useEffect(() => {
+    const loop = () => { if (gameOver) return; setScore(s => s + 1); tickRef.current++; if (tickRef.current % 100 === 0) setObstacles(prev => [...prev, 100]); setObstacles(prev => { const next = prev.map(x => x - 1.5).filter(x => x > -10); for (const obs of next) { if (obs > 10 && obs < 20 && dracoY < 10) setGameOver(true); } return next; }); animRef.current = requestAnimationFrame(loop); };
+    animRef.current = requestAnimationFrame(loop); return () => cancelAnimationFrame(animRef.current);
+  }, [gameOver, dracoY]);
+  return (
+    <div className="w-full h-40 bg-sky-300 relative overflow-hidden border-4 border-black" onClick={jump}>
+       <div className="absolute bottom-0 w-full h-4 bg-green-600"></div>
+       <div className="absolute left-4 transition-transform" style={{ bottom: `${dracoY * 2 + 16}px` }}><ProceduralDragon stage={DragonStage.TEEN} color="#ef4444" isMoving={true} scale={2} /></div>
+       {obstacles.map((x, i) => <div key={i} className="absolute bottom-4" style={{ left: `${x}%` }}><ProceduralIcon type="ROCK" size={20} /></div>)}
+       <div className="absolute top-2 right-2 text-white">Score: {Math.floor(score/10)}</div>
+       {gameOver && <button className="absolute inset-0 bg-black/50 text-white flex items-center justify-center" onClick={() => onComplete('WIN', 'RUNNER')}>GAME OVER (Click)</button>}
+    </div>
+  );
+};
+
+const RhythmGame = ({ onComplete }: any) => {
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(20);
+  const [notes, setNotes] = useState<{id: number, lane: number, y: number}[]>([]);
+  const [active, setActive] = useState(true);
+  useEffect(() => { if(!active) return; const t = setInterval(() => setTimeLeft(prev => { if(prev<=1) { setActive(false); return 0; } return prev-1; }), 1000); const f = setInterval(() => { if(Math.random() < 0.1) setNotes(p => [...p, { id: Date.now(), lane: Math.floor(Math.random()*3), y: -10 }]); setNotes(p => p.map(n => ({...n, y: n.y + 5})).filter(n => n.y < 110)); }, 100); return () => { clearInterval(t); clearInterval(f); } }, [active]);
+  const tap = (lane: number) => { if(!active) return; const hit = notes.find(n => n.lane === lane && n.y > 70 && n.y < 95); if(hit) { SoundEngine.playCoin(); setScore(s => s+10); setNotes(p => p.filter(n => n.id !== hit.id)); } };
+  return (
+    <div className="w-full h-60 bg-gray-900 relative flex flex-col items-center">
+       <div className="text-white w-full flex justify-between px-2"><span>Time: {timeLeft}</span><span>Score: {score}</span></div>
+       <div className="flex-1 w-full flex justify-around relative"> {[0,1,2].map(l => <div key={l} className="h-full w-16 border-x border-gray-700 relative"><div className="absolute bottom-4 w-full h-8 bg-white/20"></div><button className="absolute bottom-0 w-full h-12 bg-purple-600 opacity-50 active:opacity-100" onClick={()=>tap(l)}></button></div>)} {notes.map(n => <div key={n.id} className="absolute w-8 h-8" style={{ left: `${n.lane*33 + 10}%`, top: `${n.y}%` }}><ProceduralIcon type="NOTE" size={24}/></div>)} </div>
+       {!active && <button className="absolute inset-0 bg-black/80 text-white" onClick={()=>onComplete('WIN', 'RHYTHM')}>DONE (Score: {score})</button>}
+    </div>
+  );
+};
+
+const MiniGameModal = ({ onClose, onComplete, onPlayToy }: any) => {
+    const [activeGame, setActiveGame] = useState<MiniGameType>('NONE');
+    const renderGame = () => {
+        switch(activeGame) {
+            case 'RPS': return <RpsGame onComplete={onComplete} />;
+            case 'MATH': return <MathGame onComplete={onComplete} />;
+            case 'MEMORY': return <MemoryGame onComplete={onComplete} />;
+            case 'TARGET': return <TargetGame onComplete={onComplete} />;
+            case 'RUNNER': return <RunnerGame onComplete={onComplete} />;
+            case 'RHYTHM': return <RhythmGame onComplete={onComplete} />;
+            case 'FALLING': return <FallingGame onComplete={onComplete} />;
+            case 'CLICKER': return <ClickerGame onComplete={onComplete} />;
+            default: return null;
+        }
+    };
+    return (
+        <div className="absolute inset-0 bg-black/95 flex items-center justify-center z-50 text-white p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full max-w-sm">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="font-pixel text-yellow-500">{activeGame === 'NONE' ? 'OYUN SEÇ' : activeGame}</h2>
+                    <button onClick={activeGame === 'NONE' ? onClose : () => setActiveGame('NONE')} className="text-xs border px-2">{activeGame === 'NONE' ? 'X' : '< GERİ'}</button>
+                </div>
+                {activeGame === 'NONE' ? (
+                    <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
+                        <button onClick={onPlayToy} className="border border-yellow-500 p-3 text-yellow-500 animate-pulse flex flex-col items-center"><span className="material-symbols-outlined mb-1">sports_soccer</span><span className="text-xs">TOP YAKALAMA</span></button>
+                        {[
+                            {id:'RPS', name:'TAŞ KAĞIT MAKAS', icon:'✊'}, {id:'MATH', name:'MATEMATİK', icon:'1+2'}, {id:'MEMORY', name:'HAFIZA', icon:'grid_view'}, {id:'TARGET', name:'HEDEF VUR', icon:'ads_click'},
+                            {id:'RUNNER', name:'KOŞU', icon:'directions_run'}, {id:'RHYTHM', name:'RİTİM', icon:'music_note'}, {id:'FALLING', name:'YAĞMUR', icon:'umbrella'}, {id:'CLICKER', name:'HIZLI TIKLA', icon:'touch_app'}
+                        ].map(g => <button key={g.id} onClick={()=>setActiveGame(g.id as MiniGameType)} className="border border-gray-500 p-3 hover:bg-white/10 flex flex-col items-center"><span className="material-symbols-outlined mb-1">{g.icon}</span><span className="text-xs">{g.name}</span></button>)}
+                    </div>
+                ) : (
+                    <div className="border-2 border-gray-700 p-4 rounded bg-gray-900 min-h-[200px] flex items-center justify-center">{renderGame()}</div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// --- SCREENS ---
+
+const GardenScreen = ({ gameState, onNavigate, onAction }: any) => {
+  return (
+    <div className="h-full bg-green-900 p-4 font-pixel text-white flex flex-col border-4 border-green-700">
+       <div className="flex justify-between items-center mb-4 border-b-2 border-green-500 pb-2">
+           <h2 className="text-xl text-green-300">BAHÇE</h2>
+           <button onClick={() => onNavigate(Screen.MAIN)} className="bg-red-500 px-2 py-1 text-xs">ÇIKIŞ</button>
+       </div>
+       <div className="grid grid-cols-2 gap-4 mb-8">
+          {gameState.garden.map((plot: GardenPlot) => (
+             <div key={plot.id} onClick={() => onAction({ type: 'GARDEN_INTERACT', plotId: plot.id })} className={`h-24 border-4 ${plot.isUnlocked ? 'border-green-600 bg-[#3a2820]' : 'border-gray-600 bg-gray-800'} flex flex-col items-center justify-center relative cursor-pointer active:scale-95 transition-transform`}>
+                {!plot.isUnlocked ? <span className="text-gray-500 text-xs text-center">KİLİTLİ<br/>(100G)</span> : !plot.seedId ? <span className="text-green-200 animate-pulse text-xs">EK (TOHUM SEÇ)</span> : (
+                   <>{plot.stage === 0 && <div className="w-2 h-2 bg-yellow-200 rounded-full"></div>}{plot.stage === 1 && <div className="w-2 h-6 bg-green-400"></div>}{plot.stage === 2 && <div className="text-xl animate-bounce">🍎</div>}
+                      <div className="absolute bottom-1 w-3/4 h-1 bg-black"><div className="h-full bg-blue-400" style={{ width: `${plot.progress}%` }}></div></div>
+                      {Date.now() - plot.lastWatered > 10000 && plot.stage < 2 && <div className="absolute top-1 right-1 text-blue-300 text-xs animate-bounce">💧</div>}
+                   </>
+                )}
+             </div>
+          ))}
+       </div>
+       <div className="text-[10px] text-center text-green-200 mt-auto">Tohumları Pazardan Al!</div>
+    </div>
+  );
+};
+
 const ArenaScreen = ({ gameState, onNavigate, onCompleteBattle }: any) => {
     const [turn, setTurn] = useState<'PLAYER' | 'ENEMY'>('PLAYER');
     const [actionLog, setActionLog] = useState<string[]>(['Savaş Başladı!']);
@@ -294,7 +637,6 @@ const ArenaScreen = ({ gameState, onNavigate, onCompleteBattle }: any) => {
     const [flash, setFlash] = useState('');
     const [combo, setCombo] = useState(0);
     
-    // REF for Defense State to survive async calls
     const playerDefendingRef = useRef(false);
 
     useEffect(() => {
@@ -352,7 +694,7 @@ const ArenaScreen = ({ gameState, onNavigate, onCompleteBattle }: any) => {
             log = 'Savunma pozisyonu!';
             SoundEngine.playDefend();
             setCombo(0);
-            playerDefendingRef.current = true; // Activate Defense via Ref
+            playerDefendingRef.current = true; 
         }
         else if(action === 'FOCUS') {
             setAp(p => Math.min(5, p + 1));
@@ -375,8 +717,6 @@ const ArenaScreen = ({ gameState, onNavigate, onCompleteBattle }: any) => {
     const enemyTurn = () => {
         let dmg = 10 + (gameState.dragon.evolutionStage * 2);
         let log = '';
-        
-        // AI Logic
         const isLowHp = enemyHp < 20;
         
         if (isLowHp && Math.random() > 0.3) {
@@ -384,7 +724,6 @@ const ArenaScreen = ({ gameState, onNavigate, onCompleteBattle }: any) => {
              setEnemyHp(h => Math.min(enemy.maxHp, h + 10));
              log = `${enemy.name} yaralarını sardı! (+10 HP)`;
         } else {
-             // Check Defense Ref
              if(playerDefendingRef.current) {
                  dmg = Math.floor(dmg / 2);
                  log = `${enemy.name} saldırdı! (Bloklandı: ${dmg} Hasar)`;
@@ -406,7 +745,7 @@ const ArenaScreen = ({ gameState, onNavigate, onCompleteBattle }: any) => {
         }
 
         setActionLog(p => [log, ...p].slice(0,4));
-        playerDefendingRef.current = false; // Reset Defense
+        playerDefendingRef.current = false; 
 
         if(playerHp - dmg <= 0) {
              setTimeout(() => onCompleteBattle(false), 1000);
@@ -467,7 +806,129 @@ const ArenaScreen = ({ gameState, onNavigate, onCompleteBattle }: any) => {
     );
 };
 
-// ... (Rest of Main App Logic)
+const MarketScreen = ({ gameState, onBuy, onNavigate, upgrades, onBuyUpgrade }: any) => {
+  const [tab, setTab] = useState<'ITEMS' | 'UPGRADES'>('ITEMS');
+  const [subTab, setSubTab] = useState('FOOD');
+  
+  return (
+    <div className="h-full bg-[#0D0D0D] text-[#C2D5C4] font-pixel p-4 flex flex-col border-4 border-gray-600">
+      <div className="flex justify-between items-center border-b-4 border-[#C2D5C4] pb-4 mb-4">
+        <h1 className="text-sm text-[#facc15]">PAZAR</h1>
+        <div className="flex items-center gap-2"><span className="material-symbols-outlined text-[#facc15]">monetization_on</span><span>{gameState.currency}</span></div>
+      </div>
+      
+      <div className="flex gap-2 mb-4">
+          <button onClick={() => setTab('ITEMS')} className={`px-2 py-1 text-xs border-2 ${tab==='ITEMS'?'bg-[#C2D5C4] text-black':'text-[#C2D5C4]'}`}>EŞYALAR</button>
+          <button onClick={() => setTab('UPGRADES')} className={`px-2 py-1 text-xs border-2 ${tab==='UPGRADES'?'bg-[#C2D5C4] text-black':'text-[#C2D5C4]'}`}>EV</button>
+      </div>
+
+      {tab === 'ITEMS' && (
+          <>
+            <div className="flex gap-1 mb-2 overflow-x-auto">
+                {['FOOD','TOY','ACCESSORY','SEED'].map(t => <button key={t} onClick={() => setSubTab(t)} className={`text-[10px] px-2 border ${subTab===t?'bg-gray-700':''}`}>{t}</button>)}
+            </div>
+            <div className="grid grid-cols-2 gap-4 overflow-y-auto pb-4 pr-1">
+                {ITEMS.filter(i => i.type === subTab).map(item => (
+                <div key={item.id} className="border-4 border-[#C2D5C4] p-2 flex flex-col gap-2 bg-[#111]">
+                    <div className="h-10 flex items-center justify-center"><ProceduralIcon type={item.image} size={32} /></div>
+                    <div className="text-[10px] truncate text-center">{item.name}</div>
+                    <div className="flex justify-between items-center mt-auto border-t border-[#C2D5C4]/20 pt-2">
+                    <span className="text-xs text-[#facc15]">{item.price}G</span>
+                    <button onClick={() => onBuy(item)} disabled={gameState.currency < item.price} className="bg-[#C2D5C4] text-black px-1 text-[10px] hover:bg-white disabled:opacity-50">AL</button>
+                    </div>
+                </div>
+                ))}
+            </div>
+          </>
+      )}
+
+      {tab === 'UPGRADES' && (
+          <div className="flex flex-col gap-3 overflow-y-auto">
+              <div className="border-2 border-[#C2D5C4] p-2 flex justify-between items-center bg-[#111]">
+                  <div>
+                      <div className="text-xs font-bold">ORMAN EVİ</div>
+                      <div className="text-[9px] opacity-70">Yeşil atmosfer, az açlık</div>
+                  </div>
+                  {upgrades.forest ? <span className="text-green-500 text-xs">ALINDI</span> : 
+                  <button onClick={() => onBuyUpgrade('forest', 500)} className="bg-[#C2D5C4] text-black px-2 py-1 text-xs">500G</button>}
+              </div>
+              <div className="border-2 border-[#C2D5C4] p-2 flex justify-between items-center bg-[#111]">
+                  <div>
+                      <div className="text-xs font-bold">TEMİZLİK KİTİ</div>
+                      <div className="text-[9px] opacity-70">Çok daha az kirlenme</div>
+                  </div>
+                  {upgrades.cleanKit ? <span className="text-green-500 text-xs">ALINDI</span> : 
+                  <button onClick={() => onBuyUpgrade('cleanKit', 300)} className="bg-[#C2D5C4] text-black px-2 py-1 text-xs">300G</button>}
+              </div>
+              <div className="border-2 border-[#C2D5C4] p-2 flex justify-between items-center bg-[#111]">
+                  <div>
+                      <div className="text-xs font-bold">HAVA İSTASYONU</div>
+                      <div className="text-[9px] opacity-70">Hep güneşli hava</div>
+                  </div>
+                  {upgrades.weatherStation ? <span className="text-green-500 text-xs">ALINDI</span> : 
+                  <button onClick={() => onBuyUpgrade('weatherStation', 1000)} className="bg-[#C2D5C4] text-black px-2 py-1 text-xs">1000G</button>}
+              </div>
+          </div>
+      )}
+
+      <div className="mt-auto pt-4 border-t-4 border-[#C2D5C4] flex justify-center">
+        <button onClick={() => onNavigate(Screen.MAIN)} className="text-xs hover:text-white animate-pulse">&lt; GERİ DÖN</button>
+      </div>
+    </div>
+  );
+};
+
+const StartScreen = ({ onStart, onContinue, hasSave }: any) => (
+  <LcdScreen className="flex flex-col items-center justify-center relative overflow-hidden bg-[#21221d]">
+    <div className="z-10 flex flex-col items-center gap-6">
+       <h1 className="text-4xl text-[#ef4444] font-pixel text-center leading-relaxed drop-shadow-md tracking-wider">
+         Draco the<br/>Pixel Dragon
+       </h1>
+       <div className="w-32 h-32 relative animate-bounce-pixel">
+         <ProceduralDragon stage="adult" mode="idle" animate={true} />
+       </div>
+       <div className="flex flex-col gap-4 w-48">
+          <PixelButton onClick={onStart} variant="primary">YENİ OYUN</PixelButton>
+          <PixelButton onClick={onContinue} disabled={!hasSave}>DEVAM ET</PixelButton>
+       </div>
+       <div className="text-[10px] text-gray-500 mt-4 font-pixel">v1.5.0 Mobile Fix</div>
+    </div>
+  </LcdScreen>
+);
+
+const HatchingScreen = ({ onHatchTick }: any) => {
+    const [shake, setShake] = useState(false);
+    return (
+    <LcdScreen className="flex flex-col items-center justify-center">
+        <div onClick={() => { setShake(true); onHatchTick(); SoundEngine.playJump(); setTimeout(()=>setShake(false),200); }} className={`cursor-pointer ${shake ? 'animate-bounce' : ''}`}>
+            <ProceduralIcon type="EGG" size={64} />
+            <div className="mt-4 text-center text-xs animate-pulse">DOKUN!</div>
+        </div>
+    </LcdScreen>
+    );
+};
+
+const StatsScreen = ({ gameState, onNavigate }: any) => (
+    <div className="h-full bg-[#d4b4b4] border-8 border-black p-4 flex flex-col">
+        <h2 className="text-center text-xl font-bold mb-4">{gameState.dragon.name}</h2>
+        <div className="flex-1 flex flex-col items-center justify-center gap-2">
+             <ProceduralIcon type="EGG" size={64} className="mb-4 mix-blend-multiply opacity-50"/> 
+             <div className="text-sm font-bold">TÜR: {gameState.dragon.type}</div>
+             <div className="text-sm">LVL: {gameState.dragon.evolutionStage}</div>
+             <div className="text-sm">XP: {Math.floor(gameState.dragon.xp)}/{gameState.dragon.maxXp}</div>
+             <div className="grid grid-cols-2 gap-4 mt-4 text-xs">
+                 <div>STR: {gameState.dragon.stats.str}</div>
+                 <div>INT: {gameState.dragon.stats.int}</div>
+                 <div>VIT: {gameState.dragon.stats.vit}</div>
+                 <div>AGI: {gameState.dragon.stats.agi}</div>
+             </div>
+        </div>
+        <button onClick={()=>onNavigate(Screen.MAIN)} className="bg-black text-[#d4b4b4] p-3">GERİ</button>
+    </div>
+);
+
+// --- MAIN APP LOGIC ---
+
 export default function App() {
   const [gameState, setGameState] = useState<GameState>({ ...INITIAL_GAME_STATE, dragon: { ...INITIAL_GAME_STATE.dragon, name: 'DRACO' } });
   const [hasSave, setHasSave] = useState(false);
@@ -476,7 +937,7 @@ export default function App() {
   const [homeUpgrades, setHomeUpgrades] = useState<HomeUpgrades>({ forest: false, cleanKit: false, weatherStation: false });
   const [quests, setQuests] = useState<DailyQuest[]>([]);
   const [isMuted, setIsMuted] = useState(false);
-  const [permissionGranted, setPermissionGranted] = useState(false); // Browser Notifications
+  const [permissionGranted, setPermissionGranted] = useState(false);
 
   const tickRef = useRef<number | null>(null);
   const lastNotifyTime = useRef<number>(0);
@@ -582,8 +1043,7 @@ export default function App() {
       setGameState((prev) => {
         if (prev.dragon.stage === DragonStage.EGG) return prev;
         
-        // --- NOTIFICATION LOGIC ---
-        if (document.hidden && permissionGranted && Date.now() - lastNotifyTime.current > 300000) { // 5 min cooldown
+        if (document.hidden && permissionGranted && Date.now() - lastNotifyTime.current > 300000) { 
             if (prev.dragon.hunger < 20) {
                 new Notification("Draco Acıktı!", { body: "Ejderhan yemek istiyor!", icon: "/icon.svg" });
                 lastNotifyTime.current = Date.now();
@@ -749,17 +1209,19 @@ export default function App() {
       if(gameState.currency >= cost) { SoundEngine.playCoin(); setGameState(prev => ({ ...prev, currency: prev.currency - cost })); setHomeUpgrades(prev => ({ ...prev, [type]: true })); addNotification("EV GELİŞTİRİLDİ!", "#16a34a"); } else { addNotification("PARA YETERSİZ", "#dc2626"); }
   };
 
+  // FIX: Force screen to MAIN on Continue if mistakenly saved as START
   if (gameState.screen === Screen.START) return <StartScreen onStart={() => setGameState(prev => ({ ...prev, screen: Screen.HATCH }))} onContinue={() => { 
       const s = localStorage.getItem('dragon_save_v2'); 
       if(s) { 
           const p=JSON.parse(s); 
           const targetScreen = p.gameState.dragon.stage === DragonStage.EGG ? Screen.HATCH : Screen.MAIN;
-          setGameState({...p.gameState, screen: targetScreen}); // FORCE MAIN SCREEN
+          setGameState({...p.gameState, screen: targetScreen}); 
           setHomeUpgrades(p.upgrades); 
           setQuests(p.quests); 
           if(p.gameState?.settings?.muted) { SoundEngine.muted = true; setIsMuted(true); } 
       } 
   }} hasSave={hasSave} />;
+  
   if (gameState.dragon.stage === DragonStage.EGG) return <HatchingScreen onHatchTick={() => setTimeout(() => setGameState(prev => ({ ...prev, dragon: { ...prev.dragon, stage: DragonStage.BABY } })), 500)} />;
   if (gameState.screen === Screen.MARKET) return <MarketScreen gameState={gameState} upgrades={homeUpgrades} onBuy={(i:Item) => { if(gameState.currency>=i.price){ setGameState(p=>({...p,currency:p.currency-i.price,inventory:{...p.inventory,[i.id]:(p.inventory[i.id]||0)+1}})); addNotification("ALINDI","#facc15"); SoundEngine.playCoin();}}} onBuyUpgrade={handleBuyUpgrade} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} />;
   if (gameState.screen === Screen.STATS) return <StatsScreen gameState={gameState} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} />;
@@ -833,22 +1295,3 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
     </LcdScreen>
   );
 };
-const MarketScreen = ({ gameState, onBuy, onNavigate, upgrades, onBuyUpgrade }: any) => { const [tab, setTab] = useState<'ITEMS' | 'UPGRADES'>('ITEMS'); const [subTab, setSubTab] = useState('FOOD'); return ( <div className="h-full bg-[#0D0D0D] text-[#C2D5C4] font-pixel p-4 flex flex-col border-4 border-gray-600"> <div className="flex justify-between items-center border-b-4 border-[#C2D5C4] pb-4 mb-4"><h1 className="text-sm text-[#facc15]">PAZAR</h1><div className="flex items-center gap-2"><span className="material-symbols-outlined text-[#facc15]">monetization_on</span><span>{gameState.currency}</span></div></div> <div className="flex gap-2 mb-4"><button onClick={() => setTab('ITEMS')} className={`px-2 py-1 text-xs border-2 ${tab==='ITEMS'?'bg-[#C2D5C4] text-black':'text-[#C2D5C4]'}`}>EŞYALAR</button><button onClick={() => setTab('UPGRADES')} className={`px-2 py-1 text-xs border-2 ${tab==='UPGRADES'?'bg-[#C2D5C4] text-black':'text-[#C2D5C4]'}`}>EV</button></div> {tab === 'ITEMS' && ( <> <div className="flex gap-1 mb-2 overflow-x-auto">{['FOOD','TOY','ACCESSORY','SEED'].map(t => <button key={t} onClick={() => setSubTab(t)} className={`text-[10px] px-2 border ${subTab===t?'bg-gray-700':''}`}>{t}</button>)}</div> <div className="grid grid-cols-2 gap-4 overflow-y-auto pb-4 pr-1"> {ITEMS.filter(i => i.type === subTab).map(item => ( <div key={item.id} className="border-4 border-[#C2D5C4] p-2 flex flex-col gap-2 bg-[#111]"> <div className="h-10 flex items-center justify-center"><ProceduralIcon type={item.image} size={32} /></div> <div className="text-[10px] truncate text-center">{item.name}</div> <div className="flex justify-between items-center mt-auto border-t border-[#C2D5C4]/20 pt-2"><span className="text-xs text-[#facc15]">{item.price}G</span><button onClick={() => onBuy(item)} disabled={gameState.currency < item.price} className="bg-[#C2D5C4] text-black px-1 text-[10px] hover:bg-white disabled:opacity-50">AL</button></div> </div> ))} </div> </> )} {tab === 'UPGRADES' && ( <div className="flex flex-col gap-3 overflow-y-auto"> <div className="border-2 border-[#C2D5C4] p-2 flex justify-between items-center bg-[#111]"><div><div className="text-xs font-bold">ORMAN EVİ</div><div className="text-[9px] opacity-70">Yeşil atmosfer, az açlık</div></div>{upgrades.forest ? <span className="text-green-500 text-xs">ALINDI</span> : <button onClick={() => onBuyUpgrade('forest', 500)} className="bg-[#C2D5C4] text-black px-2 py-1 text-xs">500G</button>}</div> <div className="border-2 border-[#C2D5C4] p-2 flex justify-between items-center bg-[#111]"><div><div className="text-xs font-bold">TEMİZLİK KİTİ</div><div className="text-[9px] opacity-70">Çok daha az kirlenme</div></div>{upgrades.cleanKit ? <span className="text-green-500 text-xs">ALINDI</span> : <button onClick={() => onBuyUpgrade('cleanKit', 300)} className="bg-[#C2D5C4] text-black px-2 py-1 text-xs">300G</button>}</div> <div className="border-2 border-[#C2D5C4] p-2 flex justify-between items-center bg-[#111]"><div><div className="text-xs font-bold">HAVA İSTASYONU</div><div className="text-[9px] opacity-70">Hep güneşli hava</div></div>{upgrades.weatherStation ? <span className="text-green-500 text-xs">ALINDI</span> : <button onClick={() => onBuyUpgrade('weatherStation', 1000)} className="bg-[#C2D5C4] text-black px-2 py-1 text-xs">1000G</button>}</div> </div> )} <div className="mt-auto pt-4 border-t-4 border-[#C2D5C4] flex justify-center"><button onClick={() => onNavigate(Screen.MAIN)} className="text-xs hover:text-white animate-pulse">&lt; GERİ DÖN</button></div> </div> ); };
-const StartScreen = ({ onStart, onContinue, hasSave }: any) => ( <LcdScreen className="flex flex-col items-center justify-center relative overflow-hidden bg-[#21221d]"> <div className="z-10 flex flex-col items-center gap-6"> <h1 className="text-4xl text-[#ef4444] font-pixel text-center leading-relaxed drop-shadow-md tracking-wider">Draco the<br/>Pixel Dragon</h1> <div className="w-32 h-32 relative animate-bounce-pixel"><ProceduralDragon stage="adult" mode="idle" animate={true} /></div> <div className="flex flex-col gap-4 w-48"><PixelButton onClick={onStart} variant="primary">YENİ OYUN</PixelButton><PixelButton onClick={onContinue} disabled={!hasSave}>DEVAM ET</PixelButton></div> <div className="text-[10px] text-gray-500 mt-4 font-pixel">v1.4.0 Deluxe Update</div> </div> </LcdScreen> );
-const HatchingScreen = ({ onHatchTick }: any) => { const [shake, setShake] = useState(false); return (<LcdScreen className="flex flex-col items-center justify-center"><div onClick={() => { setShake(true); onHatchTick(); SoundEngine.playJump(); setTimeout(()=>setShake(false),200); }} className={`cursor-pointer ${shake ? 'animate-bounce' : ''}`}><ProceduralIcon type="EGG" size={64} /><div className="mt-4 text-center text-xs animate-pulse">DOKUN!</div></div></LcdScreen>); };
-const StatBar = ({ icon, value, reverse = false }: any) => (<div className={`flex items-center gap-1 w-full max-w-[120px] ${reverse ? 'flex-row-reverse' : ''}`}><span className="material-symbols-outlined text-lg">{icon}</span><div className="flex-1 h-4 border-2 border-lcd-fg p-[1px]"><div className="h-full bg-lcd-fg" style={{ width: `${Math.min(100, value)}%` }} /></div></div>);
-const Clouds = () => <div className="absolute inset-0 pointer-events-none opacity-30"><div className="absolute top-10 left-10 w-20 h-8 bg-white blur-md animate-pulse"></div></div>;
-const WeatherOverlay = ({ weather }: any) => weather === 'RAIN' ? <div className="absolute inset-0 bg-blue-500/20 pointer-events-none mix-blend-multiply" /> : null;
-const FloatingTextOverlay = ({ items }: any) => <div className="absolute inset-0 pointer-events-none z-50">{items.map((i:any) => <div key={i.id} style={{left:`${i.x}%`, top:`${i.y}%`, color:i.color}} className="absolute font-bold text-xs animate-bounce">{i.text}</div>)}</div>;
-const InventoryModal = ({ inventory, onSelect, onClose }: any) => { const items = ITEMS.filter(i => (inventory[i.id]||0)>0); return (<div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50"><div className="bg-lcd-bg border-4 border-lcd-fg p-4 w-64 max-h-[80%] overflow-y-auto"><div className="flex justify-between mb-2"><h3>ÇANTA</h3><button onClick={onClose}>X</button></div><div className="grid grid-cols-2 gap-2">{items.length===0 && <div className="text-xs opacity-50">Boş...</div>}{items.map(i => <button key={i.id} onClick={()=>onSelect(i)} className="border border-lcd-fg p-2 flex flex-col items-center"><ProceduralIcon type={i.image} size={24}/><span className="text-[10px]">{i.name} x{inventory[i.id]}</span></button>)}</div></div></div>); };
-const StatsScreen = ({ gameState, onNavigate }: any) => ( <div className="h-full bg-[#d4b4b4] border-8 border-black p-4 flex flex-col"> <h2 className="text-center text-xl font-bold mb-4">{gameState.dragon.name}</h2> <div className="flex-1 flex flex-col items-center justify-center gap-2"><ProceduralIcon type="EGG" size={64} className="mb-4 mix-blend-multiply opacity-50"/> <div className="text-sm font-bold">TÜR: {gameState.dragon.type}</div><div className="text-sm">LVL: {gameState.dragon.evolutionStage}</div><div className="text-sm">XP: {Math.floor(gameState.dragon.xp)}/{gameState.dragon.maxXp}</div><div className="grid grid-cols-2 gap-4 mt-4 text-xs"><div>STR: {gameState.dragon.stats.str}</div><div>INT: {gameState.dragon.stats.int}</div><div>VIT: {gameState.dragon.stats.vit}</div><div>AGI: {gameState.dragon.stats.agi}</div></div></div> <button onClick={()=>onNavigate(Screen.MAIN)} className="bg-black text-[#d4b4b4] p-3">GERİ</button> </div> );
-const FallingGame = ({ onComplete }: any) => { const [score, setScore] = useState(0); const [timeLeft, setTimeLeft] = useState(30); const [playerX, setPlayerX] = useState(50); const [items, setItems] = useState<{id:number, x:number, y:number, type:'GOOD'|'BAD'}[]>([]); useEffect(() => { const timer = setInterval(() => setTimeLeft(t => t > 0 ? t - 1 : 0), 1000); const spawner = setInterval(() => { setItems(i => [...i, { id: Date.now(), x: Math.random() * 90 + 5, y: -10, type: Math.random() > 0.3 ? 'GOOD' : 'BAD' }]); }, 800); const looper = setInterval(() => { setItems(prev => { return prev.map(i => ({...i, y: i.y + 2})).filter(i => { if (i.y > 85 && i.y < 95 && Math.abs(i.x - playerX) < 10) { if(i.type === 'GOOD') { setScore(s=>s+10); SoundEngine.playCoin(); } else { setScore(s=>Math.max(0, s-20)); SoundEngine.playBattleHit(); } return false; } return i.y < 100; }); }); }, 50); return () => { clearInterval(timer); clearInterval(spawner); clearInterval(looper); } }, []); useEffect(() => { if(timeLeft === 0) onComplete('WIN', 'FALLING'); }, [timeLeft]); return ( <div className="w-full h-64 bg-sky-200 relative overflow-hidden border-4 border-black" onClick={(e) => { const rect = e.currentTarget.getBoundingClientRect(); setPlayerX(((e.clientX - rect.left) / rect.width) * 100); }}> <div className="absolute top-2 left-2">Score: {score}</div> <div className="absolute top-2 right-2">Time: {timeLeft}</div> {items.map(i => ( <div key={i.id} className="absolute text-2xl" style={{left:`${i.x}%`, top:`${i.y}%`}}> {i.type === 'GOOD' ? '🍎' : '🪨'} </div> ))} <div className="absolute bottom-2 transition-all duration-100" style={{left:`${playerX}%`, transform:'translateX(-50%)'}}> <ProceduralDragon stage={DragonStage.TEEN} scale={2} /> </div> </div> ); };
-const ClickerGame = ({ onComplete }: any) => { const [clicks, setClicks] = useState(0); const [timeLeft, setTimeLeft] = useState(10); useEffect(() => { const t = setInterval(() => setTimeLeft(prev => { if(prev <= 1) { clearInterval(t); return 0; } return prev - 1; }), 1000); return () => clearInterval(t); }, []); useEffect(() => { if(timeLeft === 0) onComplete(clicks > 20 ? 'WIN' : 'LOSE', 'CLICKER'); }, [timeLeft]); return ( <div className="flex flex-col items-center gap-4 py-8"> <div className="text-2xl">Süre: {timeLeft}</div> <div className="text-xl">Tıklama: {clicks}</div> <button onClick={() => { setClicks(c=>c+1); SoundEngine.playEat(); }} className="bg-red-500 text-white w-32 h-32 rounded-full border-b-8 border-red-800 active:translate-y-2 active:border-b-0 text-xl font-bold"> TIKLA! </button> </div> ); };
-const RpsGame = ({ onComplete }: any) => { const [status, setStatus] = useState<'PICK' | 'RESULT'>('PICK'); const [result, setResult] = useState<string>(''); const [pcMove, setPcMove] = useState(''); const play = (choice: string) => { const moves = ['TAŞ', 'KAĞIT', 'MAKAS']; const pc = moves[Math.floor(Math.random() * 3)]; setPcMove(pc); let res: 'WIN'|'LOSE'|'DRAW' = 'LOSE'; if(choice === pc) res = 'DRAW'; else if((choice === 'TAŞ' && pc === 'MAKAS') || (choice === 'KAĞIT' && pc === 'TAŞ') || (choice === 'MAKAS' && pc === 'KAĞIT')) res = 'WIN'; setResult(res); setStatus('RESULT'); setTimeout(() => onComplete(res, 'RPS'), 1500); }; return ( <div className="flex flex-col items-center gap-4"> {status === 'PICK' ? ( <> <div className="text-sm">Seçimini Yap:</div> <div className="flex gap-2"> <button onClick={()=>play('TAŞ')} className="border-2 border-white p-2 hover:bg-white/20">🪨 TAŞ</button> <button onClick={()=>play('KAĞIT')} className="border-2 border-white p-2 hover:bg-white/20">📄 KAĞIT</button> <button onClick={()=>play('MAKAS')} className="border-2 border-white p-2 hover:bg-white/20">✂️ MAKAS</button> </div> </> ) : ( <div className="text-center animate-bounce"> <div className="text-xl">{pcMove}</div> <div className={`text-2xl font-bold ${result==='WIN'?'text-green-400':result==='LOSE'?'text-red-400':'text-yellow-400'}`}>{result === 'WIN' ? 'KAZANDIN!' : result === 'LOSE' ? 'KAYBETTİN' : 'BERABERE'}</div> </div> )} </div> ); };
-const MathGame = ({ onComplete }: any) => { const [question, setQuestion] = useState<{q:string, a:number} | null>(null); const [options, setOptions] = useState<number[]>([]); useEffect(() => { const a = Math.floor(Math.random() * 20) + 1; const b = Math.floor(Math.random() * 10) + 1; const op = Math.random() > 0.5 ? '+' : '-'; const ans = op === '+' ? a+b : a-b; setQuestion({ q: `${a} ${op} ${b} = ?`, a: ans }); const opts = new Set([ans]); while(opts.size < 3) opts.add(ans + Math.floor(Math.random() * 10) - 5); setOptions(Array.from(opts).sort(()=>Math.random()-0.5)); }, []); const check = (val: number) => { if(question && val === question.a) onComplete('WIN', 'MATH'); else onComplete('LOSE', 'MATH'); }; if(!question) return <div>Yükleniyor...</div>; return ( <div className="flex flex-col items-center gap-4"> <div className="text-2xl font-bold">{question.q}</div> <div className="grid grid-cols-3 gap-2">{options.map((o,i) => <button key={i} onClick={()=>check(o)} className="border-2 border-white p-3 text-xl hover:bg-white/20">{o}</button>)}</div> </div> ); };
-const MemoryGame = ({ onComplete }: any) => { const [cards, setCards] = useState<{id:number, icon:string, flipped:boolean, matched:boolean}[]>([]); const [flipped, setFlipped] = useState<number[]>([]); useEffect(() => { const icons = ['APPLE', 'BALL', 'HAT', 'STAR']; const deck = [...icons, ...icons].sort(() => Math.random() - 0.5).map((icon, id) => ({ id, icon, flipped: false, matched: false })); setCards(deck); }, []); const handleCardClick = (id: number) => { if(flipped.length >= 2) return; const cardIndex = cards.findIndex(c=>c.id===id); if(cards[cardIndex].matched || cards[cardIndex].flipped) return; const newCards = [...cards]; newCards[cardIndex].flipped = true; setCards(newCards); const newFlipped = [...flipped, id]; setFlipped(newFlipped); if(newFlipped.length === 2) { const c1 = newCards.find(c=>c.id===newFlipped[0]); const c2 = newCards.find(c=>c.id===newFlipped[1]); if(c1 && c2 && c1.icon === c2.icon) { setTimeout(() => { setCards(curr => { const next = curr.map(c => (c.id === c1.id || c.id === c2.id) ? {...c, matched: true} : c); if(next.every(c=>c.matched)) setTimeout(()=>onComplete('WIN', 'MEMORY'), 500); return next; }); setFlipped([]); }, 500); } else { setTimeout(() => { setCards(curr => curr.map(c => (c.id === newFlipped[0] || c.id === newFlipped[1]) ? {...c, flipped: false} : c)); setFlipped([]); }, 1000); } } }; return ( <div className="grid grid-cols-4 gap-2">{cards.map(c => <button key={c.id} onClick={()=>handleCardClick(c.id)} className={`w-10 h-10 border flex items-center justify-center bg-black/50 ${c.flipped || c.matched ? 'bg-white/20' : ''}`}>{(c.flipped || c.matched) ? <ProceduralIcon type={c.icon} size={24} /> : '?'}</button>)}</div> ); };
-const TargetGame = ({ onComplete }: any) => { const [pos, setPos] = useState({x:50, y:50}); const [score, setScore] = useState(0); const [timeLeft, setTimeLeft] = useState(5); useEffect(() => { const t = setInterval(() => { setTimeLeft(prev => { if(prev <= 1) { clearInterval(t); return 0; } return prev - 1; }); }, 1000); return () => clearInterval(t); }, []); useEffect(() => { if(timeLeft === 0) onComplete(score >= 3 ? 'WIN' : 'LOSE', 'TARGET'); }, [timeLeft]); const hit = () => { setScore(s => s+1); setPos({x: Math.random()*80+10, y: Math.random()*80+10}); SoundEngine.playCoin(); }; return ( <div className="relative w-full h-40 border border-white/20 bg-black/50 overflow-hidden"> <div className="absolute top-1 left-1 text-xs">Süre: {timeLeft} | Skor: {score}</div> <button onMouseDown={(e)=>{e.stopPropagation(); hit();}} className="absolute w-8 h-8 flex items-center justify-center bg-red-500 rounded-full animate-pulse" style={{left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%,-50%)'}}>🎯</button> </div> ); };
-const RunnerGame = ({ onComplete }: any) => { const [score, setScore] = useState(0); const [gameOver, setGameOver] = useState(false); const [dracoY, setDracoY] = useState(0); const [obstacles, setObstacles] = useState<number[]>([]); const tickRef = useRef(0); const animRef = useRef(0); const jump = () => { if (dracoY === 0) { SoundEngine.playJump(); let velocity = 15; const jumpInterval = setInterval(() => { setDracoY((prev) => { const next = prev + velocity; velocity -= 1.5; if (next <= 0) { clearInterval(jumpInterval); return 0; } return next; }); }, 30); } }; useEffect(() => { const loop = () => { if (gameOver) return; setScore(s => s + 1); tickRef.current++; if (tickRef.current % 100 === 0) setObstacles(prev => [...prev, 100]); setObstacles(prev => { const next = prev.map(x => x - 1.5).filter(x => x > -10); for (const obs of next) { if (obs > 10 && obs < 20 && dracoY < 10) setGameOver(true); } return next; }); animRef.current = requestAnimationFrame(loop); }; animRef.current = requestAnimationFrame(loop); return () => cancelAnimationFrame(animRef.current); }, [gameOver, dracoY]); return ( <div className="w-full h-40 bg-sky-300 relative overflow-hidden border-4 border-black" onClick={jump}> <div className="absolute bottom-0 w-full h-4 bg-green-600"></div> <div className="absolute left-4 transition-transform" style={{ bottom: `${dracoY * 2 + 16}px` }}><ProceduralDragon stage={DragonStage.TEEN} color="#ef4444" isMoving={true} scale={2} /></div> {obstacles.map((x, i) => <div key={i} className="absolute bottom-4" style={{ left: `${x}%` }}><ProceduralIcon type="ROCK" size={20} /></div>)} <div className="absolute top-2 right-2 text-white">Score: {Math.floor(score/10)}</div> {gameOver && <button className="absolute inset-0 bg-black/50 text-white flex items-center justify-center" onClick={() => onComplete('WIN', 'RUNNER')}>GAME OVER (Click)</button>} </div> ); };
-const RhythmGame = ({ onComplete }: any) => { const [score, setScore] = useState(0); const [timeLeft, setTimeLeft] = useState(20); const [notes, setNotes] = useState<{id: number, lane: number, y: number}[]>([]); const [active, setActive] = useState(true); useEffect(() => { if(!active) return; const t = setInterval(() => setTimeLeft(prev => { if(prev<=1) { setActive(false); return 0; } return prev-1; }), 1000); const f = setInterval(() => { if(Math.random() < 0.1) setNotes(p => [...p, { id: Date.now(), lane: Math.floor(Math.random()*3), y: -10 }]); setNotes(p => p.map(n => ({...n, y: n.y + 5})).filter(n => n.y < 110)); }, 100); return () => { clearInterval(t); clearInterval(f); } }, [active]); const tap = (lane: number) => { if(!active) return; const hit = notes.find(n => n.lane === lane && n.y > 70 && n.y < 95); if(hit) { SoundEngine.playCoin(); setScore(s => s+10); setNotes(p => p.filter(n => n.id !== hit.id)); } }; return ( <div className="w-full h-60 bg-gray-900 relative flex flex-col items-center"> <div className="text-white w-full flex justify-between px-2"><span>Time: {timeLeft}</span><span>Score: {score}</span></div> <div className="flex-1 w-full flex justify-around relative"> {[0,1,2].map(l => <div key={l} className="h-full w-16 border-x border-gray-700 relative"><div className="absolute bottom-4 w-full h-8 bg-white/20"></div><button className="absolute bottom-0 w-full h-12 bg-purple-600 opacity-50 active:opacity-100" onClick={()=>tap(l)}></button></div>)} {notes.map(n => <div key={n.id} className="absolute w-8 h-8" style={{ left: `${n.lane*33 + 10}%`, top: `${n.y}%` }}><ProceduralIcon type="NOTE" size={24}/></div>)} </div> {!active && <button className="absolute inset-0 bg-black/80 text-white" onClick={()=>onComplete('WIN', 'RHYTHM')}>DONE (Score: {score})</button>} </div> ); };
-const MiniGameModal = ({ onClose, onComplete, onPlayToy }: any) => { const [activeGame, setActiveGame] = useState<MiniGameType>('NONE'); const renderGame = () => { switch(activeGame) { case 'RPS': return <RpsGame onComplete={onComplete} />; case 'MATH': return <MathGame onComplete={onComplete} />; case 'MEMORY': return <MemoryGame onComplete={onComplete} />; case 'TARGET': return <TargetGame onComplete={onComplete} />; case 'RUNNER': return <RunnerGame onComplete={onComplete} />; case 'RHYTHM': return <RhythmGame onComplete={onComplete} />; case 'FALLING': return <FallingGame onComplete={onComplete} />; case 'CLICKER': return <ClickerGame onComplete={onComplete} />; default: return null; } }; return ( <div className="absolute inset-0 bg-black/95 flex items-center justify-center z-50 text-white p-4"> <div className="w-full max-w-sm"> <div className="flex justify-between items-center mb-4"> <h2 className="font-pixel text-yellow-500">{activeGame === 'NONE' ? 'OYUN SEÇ' : activeGame}</h2> <button onClick={activeGame === 'NONE' ? onClose : () => setActiveGame('NONE')} className="text-xs border px-2">{activeGame === 'NONE' ? 'X' : '< GERİ'}</button> </div> {activeGame === 'NONE' ? ( <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto"> <button onClick={onPlayToy} className="border border-yellow-500 p-3 text-yellow-500 animate-pulse flex flex-col items-center"><span className="material-symbols-outlined mb-1">sports_soccer</span><span className="text-xs">TOP YAKALAMA</span></button> {[ {id:'RPS', name:'TAŞ KAĞIT MAKAS', icon:'✊'}, {id:'MATH', name:'MATEMATİK', icon:'1+2'}, {id:'MEMORY', name:'HAFIZA', icon:'grid_view'}, {id:'TARGET', name:'HEDEF VUR', icon:'ads_click'}, {id:'RUNNER', name:'KOŞU', icon:'directions_run'}, {id:'RHYTHM', name:'RİTİM', icon:'music_note'}, {id:'FALLING', name:'YAĞMUR', icon:'umbrella'}, {id:'CLICKER', name:'HIZLI TIKLA', icon:'touch_app'} ].map(g => <button key={g.id} onClick={()=>setActiveGame(g.id as MiniGameType)} className="border border-gray-500 p-3 hover:bg-white/10 flex flex-col items-center"><span className="material-symbols-outlined mb-1">{g.icon}</span><span className="text-xs">{g.name}</span></button>)} </div> ) : ( <div className="border-2 border-gray-700 p-4 rounded bg-gray-900 min-h-[200px] flex items-center justify-center">{renderGame()}</div> )} </div> </div> ); };
-const GardenScreen = ({ gameState, onNavigate, onAction }: any) => { return ( <div className="h-full bg-green-900 p-4 font-pixel text-white flex flex-col border-4 border-green-700"> <div className="flex justify-between items-center mb-4 border-b-2 border-green-500 pb-2"> <h2 className="text-xl text-green-300">BAHÇE</h2> <button onClick={() => onNavigate(Screen.MAIN)} className="bg-red-500 px-2 py-1 text-xs">ÇIKIŞ</button> </div> <div className="grid grid-cols-2 gap-4 mb-8"> {gameState.garden.map((plot: GardenPlot) => ( <div key={plot.id} onClick={() => onAction({ type: 'GARDEN_INTERACT', plotId: plot.id })} className={`h-24 border-4 ${plot.isUnlocked ? 'border-green-600 bg-[#3a2820]' : 'border-gray-600 bg-gray-800'} flex flex-col items-center justify-center relative cursor-pointer active:scale-95 transition-transform`}> {!plot.isUnlocked ? <span className="text-gray-500 text-xs text-center">KİLİTLİ<br/>(100G)</span> : !plot.seedId ? <span className="text-green-200 animate-pulse text-xs">EK (TOHUM SEÇ)</span> : ( <>{plot.stage === 0 && <div className="w-2 h-2 bg-yellow-200 rounded-full"></div>}{plot.stage === 1 && <div className="w-2 h-6 bg-green-400"></div>}{plot.stage === 2 && <div className="text-xl animate-bounce">🍎</div>} <div className="absolute bottom-1 w-3/4 h-1 bg-black"><div className="h-full bg-blue-400" style={{ width: `${plot.progress}%` }}></div></div> {Date.now() - plot.lastWatered > 10000 && plot.stage < 2 && <div className="absolute top-1 right-1 text-blue-300 text-xs animate-bounce">💧</div>} </> )} </div> ))} </div> <div className="text-[10px] text-center text-green-200 mt-auto">Tohumları Pazardan Al!</div> </div> ); };
