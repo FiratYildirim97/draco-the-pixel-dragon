@@ -1,0 +1,20 @@
+{
+  "name": "Draco: Sanal Bebek Ejderha",
+  "short_name": "Draco",
+  "description": "Retro LCD ekranlı, nostaljik sanal bebek ejderha oyunu. Ejderhanı besle, eğit, bahçe yap ve evrimleştir!",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d131f",
+  "theme_color": "#b91c1c",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"]
+}

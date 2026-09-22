@@ -127,8 +127,20 @@ export interface GameState {
   
   settings: {
     muted: boolean;
+    hapticsEnabled?: boolean;
+    deviceMode?: 'shell' | 'screen';
   };
+  lastSavedTime?: number;
 }
+
+export interface OfflineSummary {
+  minutesAway: number;
+  hungerLost: number;
+  energyGained: number;
+  poopsAdded: number;
+  xpGained: number;
+}
+
 
 export type MiniGameType =
   | 'RPS'

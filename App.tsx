@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GameState, Screen, DragonStage, Item, WeatherType, MiniGameType, NpcState, DragonType, GardenPlot, DailyQuest } from './types';
+import { GameState, Screen, DragonStage, Item, WeatherType, MiniGameType, NpcState, DragonType, GardenPlot, DailyQuest, OfflineSummary } from './types';
 import { ITEMS, INITIAL_GAME_STATE, QUEST_DEFINITIONS } from './constants';
+import { Haptics } from './haptics';
 
-// --- AUDIO ENGINE ---
+// --- AUDIO & HAPTIC ENGINE ---
 const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
 
 const SoundEngine = {
@@ -26,36 +27,45 @@ const SoundEngine = {
     }
   },
   playJump: () => {
+    Haptics.tap();
     SoundEngine.playTone(150, 'square', 0.1);
     setTimeout(() => SoundEngine.playTone(300, 'square', 0.2), 100);
   },
   playEat: () => {
+    Haptics.success();
     SoundEngine.playTone(200, 'sawtooth', 0.1);
     setTimeout(() => SoundEngine.playTone(150, 'sawtooth', 0.1), 100);
   },
   playCoin: () => {
+    Haptics.tap();
     SoundEngine.playTone(1000, 'sine', 0.1, 0.05);
     setTimeout(() => SoundEngine.playTone(1500, 'sine', 0.3, 0.05), 100);
   },
   playEvolve: () => {
+    Haptics.evolve();
     [220, 330, 440, 550, 660, 880].forEach((f, i) => {
       setTimeout(() => SoundEngine.playTone(f, 'square', 0.3, 0.1), i * 150);
     });
   },
   playBattleHit: () => {
+    Haptics.mediumTap();
     SoundEngine.playTone(100, 'sawtooth', 0.2, 0.2);
   },
   playBattleWin: () => {
+    Haptics.success();
     SoundEngine.playTone(400, 'square', 0.2);
     setTimeout(() => SoundEngine.playTone(600, 'square', 0.4), 200);
   },
   playDefend: () => {
+    Haptics.tap();
     SoundEngine.playTone(800, 'triangle', 0.1, 0.1);
   },
   playCharge: () => {
+    Haptics.mediumTap();
     SoundEngine.playTone(300, 'sine', 0.5, 0.1);
   },
   playUltimate: () => {
+    Haptics.evolve();
     [100, 200, 300, 400, 500].forEach((f, i) => setTimeout(() => SoundEngine.playTone(f, 'sawtooth', 0.1, 0.3), i*50));
   }
 };
@@ -504,20 +514,49 @@ const MemoryGame = ({ onComplete }: any) => {
 const TargetGame = ({ onComplete }: any) => {
     const [pos, setPos] = useState({x:50, y:50});
     const [score, setScore] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(5);
+    const [timeLeft, setTimeLeft] = useState(12);
+    const [targetType, setTargetType] = useState<'FRUIT' | 'STONE'>('FRUIT');
+
     useEffect(() => {
         const t = setInterval(() => {
-            setTimeLeft(prev => { if(prev <= 1) { clearInterval(t); onComplete(score >= 3 ? 'WIN' : 'LOSE', 'TARGET'); return 0; } return prev - 1; });
+            setTimeLeft(prev => { 
+                if(prev <= 1) { 
+                    clearInterval(t); 
+                    return 0; 
+                } 
+                return prev - 1; 
+            });
         }, 1000);
         return () => clearInterval(t);
-    }, []); // Removed score dependency to fix timer reset
-    useEffect(() => { if(timeLeft === 0) onComplete(score >= 3 ? 'WIN' : 'LOSE', 'TARGET'); }, [timeLeft]);
+    }, []);
 
-    const hit = () => { setScore(s => s+1); setPos({x: Math.random()*80+10, y: Math.random()*80+10}); SoundEngine.playCoin(); };
+    useEffect(() => { 
+        if(timeLeft === 0) onComplete(score >= 6 ? 'WIN' : 'LOSE', 'TARGET'); 
+    }, [timeLeft]);
+
+    const hit = () => { 
+        Haptics.tap();
+        setScore(s => s + 1); 
+        setPos({x: Math.random() * 76 + 12, y: Math.random() * 70 + 15}); 
+        setTargetType(Math.random() > 0.4 ? 'FRUIT' : 'STONE');
+        SoundEngine.playCoin(); 
+    };
+
     return (
-        <div className="relative w-full h-40 border border-white/20 bg-black/50 overflow-hidden">
-            <div className="absolute top-1 left-1 text-xs">Süre: {timeLeft} | Skor: {score}</div>
-            <button onMouseDown={(e)=>{e.stopPropagation(); hit();}} className="absolute w-8 h-8 flex items-center justify-center bg-red-500 rounded-full animate-pulse" style={{left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%,-50%)'}}>🎯</button>
+        <div className="relative w-full h-48 border-4 border-lcd-fg bg-black/60 overflow-hidden font-pixel select-none">
+            <div className="absolute top-2 left-2 text-[10px] text-yellow-300">Süre: {timeLeft}s | Skor: {score}/6</div>
+            <div className="absolute top-2 right-2 text-[9px] text-green-300">HEDEFE DOKUN!</div>
+            <button 
+                onTouchStart={(e)=>{ e.stopPropagation(); hit(); }}
+                onClick={(e)=>{ e.stopPropagation(); hit(); }} 
+                className="absolute w-12 h-12 flex items-center justify-center text-2xl active:scale-125 transition-transform" 
+                style={{left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%,-50%)'}}
+            >
+                {targetType === 'FRUIT' ? '🍎' : '🎯'}
+            </button>
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 opacity-30 text-[8px] text-white">
+                DRACO İLE NİŞAN AL
+            </div>
         </div>
     );
 };
@@ -900,12 +939,178 @@ const HatchingScreen = ({ onHatchTick }: any) => {
     const [shake, setShake] = useState(false);
     return (
     <LcdScreen className="flex flex-col items-center justify-center">
-        <div onClick={() => { setShake(true); onHatchTick(); SoundEngine.playJump(); setTimeout(()=>setShake(false),200); }} className={`cursor-pointer ${shake ? 'animate-bounce' : ''}`}>
-            <ProceduralIcon type="EGG" size={64} />
-            <div className="mt-4 text-center text-xs animate-pulse">DOKUN!</div>
+        <div onClick={() => { 
+            setShake(true); 
+            Haptics.heartbeat(); 
+            onHatchTick(); 
+            SoundEngine.playJump(); 
+            setTimeout(()=>setShake(false),200); 
+        }} className={`cursor-pointer ${shake ? 'animate-bounce' : ''}`}>
+            <ProceduralIcon type="EGG" size={72} />
+            <div className="mt-4 text-center text-xs animate-pulse text-amber-900 font-bold">DOKUN! (Yumurtayı Çatlat)</div>
         </div>
     </LcdScreen>
     );
+};
+
+// --- TAMAGOTCHI SHELL & HARDWARE BUTTONS ---
+
+const TamagotchiShell = ({ 
+  children, 
+  deviceMode, 
+  onToggleDeviceMode, 
+  onButtonA, 
+  onButtonB, 
+  onButtonC,
+  buttonALabel = "ÇANTA",
+  buttonBLabel = "SEV",
+  buttonCLabel = "TEMİZLE"
+}: any) => {
+  if (deviceMode !== 'shell') {
+    return (
+      <div className="fixed inset-0 w-full h-full overflow-hidden">
+        {children}
+        <button 
+          onClick={onToggleDeviceMode}
+          title="Tamagotchi Cihaz Görünümüne Geç"
+          className="absolute top-2 left-2 z-50 bg-black/60 hover:bg-black/80 text-white px-2 py-1.5 rounded-full border border-white/30 text-xs flex items-center gap-1 active:scale-95 shadow-pixel"
+        >
+          <span className="text-sm">🥚</span>
+          <span className="text-[9px] font-pixel hidden sm:inline">KABUK</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-[#070b14] flex flex-col items-center justify-center p-2 select-none overflow-hidden">
+      {/* 90s Egg-shaped Tamagotchi Plastic Case */}
+      <div className="relative w-full max-w-[390px] h-[96vh] max-h-[780px] bg-gradient-to-b from-[#e11d48] via-[#b91c1c] to-[#7f1d1d] rounded-[52px] p-3 shadow-[0_25px_50px_rgba(0,0,0,0.9),inset_0_4px_10px_rgba(255,255,255,0.4),inset_0_-8px_16px_rgba(0,0,0,0.6)] border-4 border-[#450a0a] flex flex-col items-center justify-between">
+        
+        {/* Keychain Ring Loop */}
+        <div className="absolute -top-3.5 w-12 h-5 border-4 border-[#ca8a04] bg-[#78350f] rounded-t-full shadow-inner flex items-center justify-center">
+          <div className="w-3.5 h-1.5 bg-[#070b14] rounded-t-full"></div>
+        </div>
+
+        {/* Top Header / Mode Switcher */}
+        <div className="w-full flex items-center justify-between px-4 pt-2">
+          <div className="font-pixel text-[10px] text-yellow-300 tracking-wider flex items-center gap-1 drop-shadow">
+            <span>🔥</span> DRACO-GOTCHI
+          </div>
+          <button 
+            onClick={onToggleDeviceMode}
+            title="Tam Ekran Moduna Geç"
+            className="bg-black/60 hover:bg-black/80 text-white text-[9px] px-2 py-1 rounded font-pixel border border-white/20 flex items-center gap-1 active:scale-95"
+          >
+            <span>📱</span> TAM EKRAN
+          </button>
+        </div>
+
+        {/* Inner LCD Screen Frame */}
+        <div className="w-full flex-1 max-h-[64%] my-2 bg-[#78350f] p-2.5 rounded-[26px] border-4 border-[#451a03] shadow-[inset_0_4px_10px_rgba(0,0,0,0.7),0_2px_4px_rgba(255,255,255,0.2)] flex flex-col">
+          <div className="flex justify-between items-center text-[7px] text-[#fef08a] font-pixel px-2 pb-1 opacity-75">
+            <span>PIXEL DRAGON</span>
+            <span>GEN-1 TAMAGOTCHI</span>
+          </div>
+
+          {/* Actual LCD Screen Viewport */}
+          <div className="flex-1 relative rounded-[14px] overflow-hidden border-2 border-[#21221d] shadow-screen-inner">
+            {children}
+          </div>
+        </div>
+
+        {/* Nostalgic Physical Hardware 3-Buttons (A - B - C) */}
+        <div className="w-full px-3 pb-3 flex flex-col items-center gap-1.5">
+          <div className="flex justify-around items-center w-full gap-2">
+            {/* Button A */}
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={() => { Haptics.mediumTap(); onButtonA?.(); }}
+                className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-b from-amber-300 to-amber-500 active:from-amber-500 active:to-amber-600 border-4 border-amber-700 shadow-[0_5px_0_#78350f,0_6px_8px_rgba(0,0,0,0.5)] active:translate-y-1 active:shadow-[0_1px_0_#78350f] transition-all flex items-center justify-center font-pixel text-xs sm:text-sm font-bold text-amber-950"
+              >
+                A
+              </button>
+              <span className="text-[8px] font-pixel text-yellow-200 uppercase">{buttonALabel}</span>
+            </div>
+
+            {/* Button B */}
+            <div className="flex flex-col items-center gap-1 mt-3">
+              <button
+                onClick={() => { Haptics.mediumTap(); onButtonB?.(); }}
+                className="w-14 h-14 sm:w-15 sm:h-15 rounded-full bg-gradient-to-b from-amber-300 to-amber-500 active:from-amber-500 active:to-amber-600 border-4 border-amber-700 shadow-[0_5px_0_#78350f,0_6px_8px_rgba(0,0,0,0.5)] active:translate-y-1 active:shadow-[0_1px_0_#78350f] transition-all flex items-center justify-center font-pixel text-xs sm:text-sm font-bold text-amber-950"
+              >
+                B
+              </button>
+              <span className="text-[8px] font-pixel text-yellow-200 uppercase">{buttonBLabel}</span>
+            </div>
+
+            {/* Button C */}
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={() => { Haptics.mediumTap(); onButtonC?.(); }}
+                className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-b from-amber-300 to-amber-500 active:from-amber-500 active:to-amber-600 border-4 border-amber-700 shadow-[0_5px_0_#78350f,0_6px_8px_rgba(0,0,0,0.5)] active:translate-y-1 active:shadow-[0_1px_0_#78350f] transition-all flex items-center justify-center font-pixel text-xs sm:text-sm font-bold text-amber-950"
+              >
+                C
+              </button>
+              <span className="text-[8px] font-pixel text-yellow-200 uppercase">{buttonCLabel}</span>
+            </div>
+          </div>
+          
+          <div className="text-[7px] font-pixel text-rose-200/50 uppercase tracking-widest pt-1">
+            RETRO DRAGON PET COMPANION
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+// --- OFFLINE PROGRESSION MODAL ---
+
+const OfflineSummaryModal = ({ summary, onClose }: { summary: OfflineSummary, onClose: () => void }) => {
+  const hours = Math.floor(summary.minutesAway / 60);
+  const mins = summary.minutesAway % 60;
+  const timeText = hours > 0 ? `${hours} sa ${mins} dk` : `${mins} dakika`;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-lcd-bg border-4 border-lcd-fg p-4 w-full max-w-xs shadow-pixel text-center font-pixel animate-bounce-pixel">
+        <div className="text-xs font-bold border-b-2 border-lcd-fg pb-2 mb-3">
+          ✨ TEKRAR HOŞ GELDİN! ✨
+        </div>
+        <div className="text-[10px] mb-3 text-left bg-black/10 p-2.5 rounded border border-lcd-fg/30">
+          <p className="mb-2 text-center text-[9px] text-gray-800">Draco seni <strong>{timeText}</strong> boyunca bekledi!</p>
+          <div className="space-y-1.5 text-[9px]">
+            <div className="flex justify-between">
+              <span>🍗 Açlık:</span>
+              <span className="text-red-700 font-bold">-{summary.hungerLost}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span>💤 Dinlenme:</span>
+              <span className="text-blue-800 font-bold">+{summary.energyGained}%</span>
+            </div>
+            {summary.poopsAdded > 0 && (
+              <div className="flex justify-between">
+                <span>💩 Tuvalet:</span>
+                <span className="text-amber-800 font-bold">+{summary.poopsAdded} adet</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span>⭐ Büyüme:</span>
+              <span className="text-green-800 font-bold">+{summary.xpGained} XP</span>
+            </div>
+          </div>
+        </div>
+        <button 
+          onClick={() => { Haptics.mediumTap(); onClose(); }}
+          className="w-full bg-lcd-fg text-lcd-bg py-2.5 px-2 text-[10px] uppercase border-2 border-black font-bold active:translate-y-1 shadow-pixel hover:opacity-90"
+        >
+          DRACO İLE İLGİLEN ❤️
+        </button>
+      </div>
+    </div>
+  );
 };
 
 const StatsScreen = ({ gameState, onNavigate }: any) => (
@@ -930,7 +1135,11 @@ const StatsScreen = ({ gameState, onNavigate }: any) => (
 // --- MAIN APP LOGIC ---
 
 export default function App() {
-  const [gameState, setGameState] = useState<GameState>({ ...INITIAL_GAME_STATE, dragon: { ...INITIAL_GAME_STATE.dragon, name: 'DRACO' } });
+  const [gameState, setGameState] = useState<GameState>({ 
+    ...INITIAL_GAME_STATE, 
+    dragon: { ...INITIAL_GAME_STATE.dragon, name: 'DRACO' },
+    settings: { muted: false, deviceMode: 'screen', hapticsEnabled: true }
+  });
   const [hasSave, setHasSave] = useState(false);
   const [notifications, setNotifications] = useState<FloatingText[]>([]);
   const [npc, setNpc] = useState<NpcState | null>(null);
@@ -938,6 +1147,7 @@ export default function App() {
   const [quests, setQuests] = useState<DailyQuest[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [offlineSummary, setOfflineSummary] = useState<OfflineSummary | null>(null);
 
   const tickRef = useRef<number | null>(null);
   const lastNotifyTime = useRef<number>(0);
@@ -945,12 +1155,78 @@ export default function App() {
   useEffect(() => {
     const saved = localStorage.getItem('dragon_save_v2');
     if (saved) {
-      const p = JSON.parse(saved);
-      if(p.gameState) setGameState(prev => ({...prev, ...p.gameState, dragon: {...prev.dragon, ...p.gameState.dragon}, settings: p.gameState.settings || {muted:false}}));
-      if(p.upgrades) setHomeUpgrades(p.upgrades);
-      if(p.quests) setQuests(p.quests);
-      setHasSave(true);
-      if(p.gameState?.settings?.muted) { SoundEngine.muted = true; setIsMuted(true); }
+      try {
+        const p = JSON.parse(saved);
+        let loadedGameState = p.gameState;
+        if (loadedGameState) {
+          // Check offline time progression
+          const lastSaved = p.lastSavedTime || loadedGameState.lastSavedTime;
+          if (lastSaved && typeof lastSaved === 'number') {
+            const diffMs = Date.now() - lastSaved;
+            const minutesAway = Math.floor(diffMs / 60000);
+
+            // If away for more than 1 minute and not in EGG stage, calculate offline growth & needs
+            if (minutesAway >= 1 && loadedGameState.dragon?.stage !== DragonStage.EGG) {
+              const clampedMins = Math.min(minutesAway, 1440); // max 24 hours
+              const hungerLost = Math.round(clampedMins * 0.08 * 10) / 10;
+              const isSleeping = loadedGameState.dragon.isSleeping;
+              const energyGained = isSleeping ? Math.min(100, Math.round(clampedMins * 0.6)) : 0;
+              const hygieneLost = Math.round(clampedMins * 0.04 * 10) / 10;
+              const poopsAdded = Math.min(4, Math.floor(clampedMins / 60));
+              const xpGained = Math.round(clampedMins * 0.03 * 10) / 10;
+
+              loadedGameState = {
+                ...loadedGameState,
+                dragon: {
+                  ...loadedGameState.dragon,
+                  hunger: Math.max(0, Math.round((loadedGameState.dragon.hunger - hungerLost) * 10) / 10),
+                  hygiene: Math.max(0, Math.round((loadedGameState.dragon.hygiene - hygieneLost) * 10) / 10),
+                  energy: isSleeping 
+                    ? Math.min(100, loadedGameState.dragon.energy + energyGained) 
+                    : Math.max(0, loadedGameState.dragon.energy - Math.round(clampedMins * 0.03)),
+                  happiness: Math.max(10, Math.round((loadedGameState.dragon.happiness - (hungerLost > 30 ? 20 : 5)) * 10) / 10),
+                  poops: Math.min(6, (loadedGameState.dragon.poops || 0) + poopsAdded),
+                  xp: loadedGameState.dragon.xp + xpGained,
+                  age: Math.round((loadedGameState.dragon.age + (clampedMins * 0.001)) * 100) / 100
+                },
+                garden: (loadedGameState.garden || []).map((plot: GardenPlot) => {
+                  if (plot.seedId && plot.stage < 2) {
+                    const addedProgress = Math.min(100, clampedMins * 2);
+                    return { ...plot, progress: Math.min(100, plot.progress + addedProgress) };
+                  }
+                  return plot;
+                })
+              };
+
+              setOfflineSummary({
+                minutesAway,
+                hungerLost,
+                energyGained,
+                poopsAdded,
+                xpGained
+              });
+            }
+          }
+
+          setGameState(prev => ({
+            ...prev,
+            ...loadedGameState,
+            dragon: { ...prev.dragon, ...loadedGameState.dragon },
+            settings: {
+              muted: false,
+              deviceMode: 'screen',
+              hapticsEnabled: true,
+              ...(loadedGameState.settings || {})
+            }
+          }));
+        }
+        if(p.upgrades) setHomeUpgrades(p.upgrades);
+        if(p.quests) setQuests(p.quests);
+        setHasSave(true);
+        if(p.gameState?.settings?.muted) { SoundEngine.muted = true; setIsMuted(true); }
+      } catch (err) {
+        console.error("Save load error", err);
+      }
     } else {
       refreshQuests();
     }
@@ -1099,9 +1375,27 @@ export default function App() {
       });
       setGameState(curr => { if(curr.dragon.happiness >= 80) checkQuestCompletion('HAPPY_80'); return curr; });
     }, 1000);
-    const saveInterval = window.setInterval(() => { localStorage.setItem('dragon_save_v2', JSON.stringify({ gameState, upgrades: homeUpgrades, quests })); }, 30000);
-    return () => { if(tickRef.current) clearInterval(tickRef.current); clearInterval(saveInterval); }
-  }, [gameState.screen, homeUpgrades, permissionGranted]);
+    const saveCurrentState = () => {
+      localStorage.setItem('dragon_save_v2', JSON.stringify({ 
+        gameState: { ...gameState, lastSavedTime: Date.now() }, 
+        upgrades: homeUpgrades, 
+        quests,
+        lastSavedTime: Date.now()
+      }));
+    };
+
+    const saveInterval = window.setInterval(saveCurrentState, 15000);
+    const handleVisibility = () => { if (document.hidden) saveCurrentState(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('beforeunload', saveCurrentState);
+
+    return () => { 
+      if(tickRef.current) clearInterval(tickRef.current); 
+      clearInterval(saveInterval); 
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('beforeunload', saveCurrentState);
+    };
+  }, [gameState, homeUpgrades, quests, permissionGranted]);
 
   const handleAction = (action: any) => {
     const type = typeof action === 'string' ? action : action.type;
@@ -1209,26 +1503,90 @@ export default function App() {
       if(gameState.currency >= cost) { SoundEngine.playCoin(); setGameState(prev => ({ ...prev, currency: prev.currency - cost })); setHomeUpgrades(prev => ({ ...prev, [type]: true })); addNotification("EV GELİŞTİRİLDİ!", "#16a34a"); } else { addNotification("PARA YETERSİZ", "#dc2626"); }
   };
 
-  // FIX: Force screen to MAIN on Continue if mistakenly saved as START
-  if (gameState.screen === Screen.START) return <StartScreen onStart={() => setGameState(prev => ({ ...prev, screen: Screen.HATCH }))} onContinue={() => { 
-      const s = localStorage.getItem('dragon_save_v2'); 
-      if(s) { 
-          const p=JSON.parse(s); 
-          const targetScreen = p.gameState.dragon.stage === DragonStage.EGG ? Screen.HATCH : Screen.MAIN;
-          setGameState({...p.gameState, screen: targetScreen}); 
-          setHomeUpgrades(p.upgrades); 
-          setQuests(p.quests); 
-          if(p.gameState?.settings?.muted) { SoundEngine.muted = true; setIsMuted(true); } 
-      } 
-  }} hasSave={hasSave} />;
-  
-  if (gameState.dragon.stage === DragonStage.EGG) return <HatchingScreen onHatchTick={() => setTimeout(() => setGameState(prev => ({ ...prev, dragon: { ...prev.dragon, stage: DragonStage.BABY } })), 500)} />;
-  if (gameState.screen === Screen.MARKET) return <MarketScreen gameState={gameState} upgrades={homeUpgrades} onBuy={(i:Item) => { if(gameState.currency>=i.price){ setGameState(p=>({...p,currency:p.currency-i.price,inventory:{...p.inventory,[i.id]:(p.inventory[i.id]||0)+1}})); addNotification("ALINDI","#facc15"); SoundEngine.playCoin();}}} onBuyUpgrade={handleBuyUpgrade} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} />;
-  if (gameState.screen === Screen.STATS) return <StatsScreen gameState={gameState} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} />;
-  if (gameState.screen === Screen.GARDEN) return <GardenScreen gameState={gameState} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} onAction={handleAction} />;
-  if (gameState.screen === Screen.ARENA) return <ArenaScreen gameState={gameState} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} onCompleteBattle={(win:boolean) => { setGameState(p=>({...p,screen:Screen.MAIN, currency: p.currency + (win?50:10)})); addNotification(win?"ZAFER! +50G":"YENİLGİ +10G", win?"#facc15":"#ef4444"); if(win) checkQuestCompletion('BATTLE_PLAY'); }} />;
+  const toggleDeviceMode = () => {
+    Haptics.tap();
+    setGameState(prev => ({
+      ...prev,
+      settings: {
+        ...prev.settings,
+        deviceMode: prev.settings?.deviceMode === 'shell' ? 'screen' : 'shell'
+      }
+    }));
+  };
 
-  return <MainGameScreen gameState={gameState} isMuted={isMuted} onToggleMute={() => { SoundEngine.muted = !SoundEngine.muted; setIsMuted(!isMuted); }} onRequestPerm={requestNotificationPermission} permissionGranted={permissionGranted} upgrades={homeUpgrades} npc={npc} onNpcClick={handleNpcClick} onAction={handleAction} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} onPet={() => { setGameState(p => ({ ...p, dragon: { ...p.dragon, happiness: Math.min(100, p.dragon.happiness + 5) } })); addNotification('<3', '#f472b6'); SoundEngine.playEat(); checkQuestCompletion('PET'); }} notifications={notifications} onMiniGameComplete={handleMiniGameComplete} quests={quests} onClaimQuest={handleClaimQuest} addNotification={addNotification} />;
+  const handlePet = () => {
+    setGameState(p => ({ ...p, dragon: { ...p.dragon, happiness: Math.min(100, p.dragon.happiness + 5) } }));
+    addNotification('❤️', '#f472b6');
+    SoundEngine.playEat();
+    Haptics.purr();
+    checkQuestCompletion('PET');
+  };
+
+  const handleShellButtonA = () => {
+    if (gameState.screen !== Screen.MAIN) {
+      setGameState(p => ({ ...p, screen: Screen.MAIN }));
+    } else {
+      window.dispatchEvent(new CustomEvent('tamagotchi-action', { detail: 'TOGGLE_INVENTORY' }));
+    }
+  };
+
+  const handleShellButtonB = () => {
+    if (gameState.screen === Screen.START) {
+      setGameState(prev => ({ ...prev, screen: Screen.HATCH }));
+    } else if (gameState.screen !== Screen.MAIN) {
+      setGameState(p => ({ ...p, screen: Screen.MAIN }));
+    } else {
+      handlePet();
+    }
+  };
+
+  const handleShellButtonC = () => {
+    if (gameState.screen !== Screen.MAIN) {
+      setGameState(p => ({ ...p, screen: Screen.MAIN }));
+    } else {
+      handleAction({ type: 'CLEAN' });
+    }
+  };
+
+  const renderActiveScreen = () => {
+    if (gameState.screen === Screen.START) return <StartScreen onStart={() => setGameState(prev => ({ ...prev, screen: Screen.HATCH }))} onContinue={() => { 
+        const s = localStorage.getItem('dragon_save_v2'); 
+        if(s) { 
+            const p = JSON.parse(s); 
+            const targetScreen = p.gameState?.dragon?.stage === DragonStage.EGG ? Screen.HATCH : Screen.MAIN;
+            setGameState({ ...p.gameState, screen: targetScreen }); 
+            setHomeUpgrades(p.upgrades || {}); 
+            setQuests(p.quests || []); 
+            if(p.gameState?.settings?.muted) { SoundEngine.muted = true; setIsMuted(true); } 
+        } 
+    }} hasSave={hasSave} />;
+    
+    if (gameState.dragon.stage === DragonStage.EGG) return <HatchingScreen onHatchTick={() => setTimeout(() => { Haptics.evolve(); setGameState(prev => ({ ...prev, dragon: { ...prev.dragon, stage: DragonStage.BABY } })); }, 500)} />;
+    if (gameState.screen === Screen.MARKET) return <MarketScreen gameState={gameState} upgrades={homeUpgrades} onBuy={(i:Item) => { if(gameState.currency>=i.price){ setGameState(p=>({...p,currency:p.currency-i.price,inventory:{...p.inventory,[i.id]:(p.inventory[i.id]||0)+1}})); addNotification("ALINDI","#facc15"); SoundEngine.playCoin();}}} onBuyUpgrade={handleBuyUpgrade} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} />;
+    if (gameState.screen === Screen.STATS) return <StatsScreen gameState={gameState} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} />;
+    if (gameState.screen === Screen.GARDEN) return <GardenScreen gameState={gameState} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} onAction={handleAction} />;
+    if (gameState.screen === Screen.ARENA) return <ArenaScreen gameState={gameState} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} onCompleteBattle={(win:boolean) => { setGameState(p=>({...p,screen:Screen.MAIN, currency: p.currency + (win?50:10)})); addNotification(win?"ZAFER! +50G":"YENİLGİ +10G", win?"#facc15":"#ef4444"); if(win) checkQuestCompletion('BATTLE_PLAY'); }} />;
+
+    return <MainGameScreen gameState={gameState} isMuted={isMuted} onToggleMute={() => { SoundEngine.muted = !SoundEngine.muted; setIsMuted(!isMuted); }} onRequestPerm={requestNotificationPermission} permissionGranted={permissionGranted} upgrades={homeUpgrades} npc={npc} onNpcClick={handleNpcClick} onAction={handleAction} onNavigate={(s:Screen) => setGameState(p=>({...p,screen:s}))} onPet={handlePet} notifications={notifications} onMiniGameComplete={handleMiniGameComplete} quests={quests} onClaimQuest={handleClaimQuest} addNotification={addNotification} />;
+  };
+
+  return (
+    <TamagotchiShell
+      deviceMode={gameState.settings?.deviceMode || 'screen'}
+      onToggleDeviceMode={toggleDeviceMode}
+      onButtonA={handleShellButtonA}
+      onButtonB={handleShellButtonB}
+      onButtonC={handleShellButtonC}
+      buttonALabel={gameState.screen !== Screen.MAIN ? "GERİ" : "ÇANTA"}
+      buttonBLabel={gameState.screen !== Screen.MAIN ? "ONAY" : "SEV"}
+      buttonCLabel={gameState.screen !== Screen.MAIN ? "ÇIK" : "TEMİZLE"}
+    >
+      {renderActiveScreen()}
+      {offlineSummary && (
+        <OfflineSummaryModal summary={offlineSummary} onClose={() => setOfflineSummary(null)} />
+      )}
+    </TamagotchiShell>
+  );
 }
 
 const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications, onMiniGameComplete, upgrades, npc, onNpcClick, quests, onClaimQuest, addNotification, isMuted, onToggleMute, onRequestPerm, permissionGranted }: any) => {
@@ -1240,6 +1598,20 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
   const [dracoPos, setDracoPos] = useState({ x: 50, y: 50 });
   const [targetPos, setTargetPos] = useState({ x: 50, y: 50 });
   const [activeToy, setActiveToy] = useState<{ id: string, x: number, y: number } | null>(null);
+  
+  const petDistanceRef = useRef(0);
+
+  // Listen for Tamagotchi Shell physical buttons
+  useEffect(() => {
+    const handleShellEvent = (e: any) => {
+      if (e.detail === 'TOGGLE_INVENTORY') {
+        setShowInventory(prev => !prev);
+      }
+    };
+    window.addEventListener('tamagotchi-action', handleShellEvent);
+    return () => window.removeEventListener('tamagotchi-action', handleShellEvent);
+  }, []);
+
   useEffect(() => {
       let animFrame: number;
       const updatePosition = () => {
@@ -1261,17 +1633,30 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
       };
       animFrame = requestAnimationFrame(updatePosition); return () => cancelAnimationFrame(animFrame);
   }, [targetPos, activeToy, dragon.energy]);
+
   const handleScreenClick = (e: React.MouseEvent<HTMLDivElement>) => {
       const rect = e.currentTarget.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / rect.width) * 100;
       const y = ((e.clientY - rect.top) / rect.height) * 100;
       if (activeToy) { setActiveToy({ ...activeToy, x, y }); setTargetPos({ x, y }); } else { setTargetPos({ x, y }); }
   };
+
+  const handlePointerPet = (e: React.PointerEvent) => {
+    if (e.buttons > 0 || e.pointerType === 'touch') {
+      petDistanceRef.current += Math.hypot(e.movementX || 0, e.movementY || 0);
+      if (petDistanceRef.current > 35) {
+        petDistanceRef.current = 0;
+        onPet();
+      }
+    }
+  };
+
   const activateToy = (toyId: string) => { setActiveToy({ id: toyId, x: 50 + (Math.random()*20-10), y: 50 }); setTargetPos({ x: 50 + (Math.random()*20-10), y: 50 }); setShowInventory(false); setShowMiniGame(false); };
   const getToyImage = (id: string) => { const item = ITEMS.find(i => i.id === id); return item ? item.image : 'BALL'; };
   const dx = targetPos.x - dracoPos.x;
   const dy = targetPos.y - dracoPos.y;
   const isMoving = Math.sqrt(dx*dx + dy*dy) > 0.5;
+
   return (
     <LcdScreen className="flex flex-col relative" isNight={dragon.isSleeping} upgrades={upgrades} onClick={handleScreenClick}>
       <Clouds />
@@ -1280,14 +1665,57 @@ const MainGameScreen = ({ gameState, onAction, onNavigate, onPet, notifications,
       {npc && <button onClick={(e) => { e.stopPropagation(); onNpcClick(); }} className="absolute z-20 animate-bounce" style={{ left: `${npc.x}%`, top: `${npc.y}%`, transform: 'translate(-50%, -50%)' }}><ProceduralIcon type={npc.type} size={48} /><span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] bg-white text-black px-1 rounded whitespace-nowrap shadow-pixel">{npc.message}</span></button>}
       {activeToy && <div className="absolute z-10 transition-all duration-300 ease-out" style={{ left: `${activeToy.x}%`, top: `${activeToy.y}%`, transform: 'translate(-50%, -50%)' }}><ProceduralIcon type={getToyImage(activeToy.id)} size={activeToy.id === 'flame_show' ? 48 : 24} className={activeToy.id === 'flame_show' ? 'animate-pulse' : 'animate-spin'} /></div>}
       <div className="absolute top-2 right-2 z-50 flex gap-2">
-          {!permissionGranted && <button onClick={(e)=>{e.stopPropagation(); onRequestPerm();}} className="p-1 rounded bg-blue-500 text-white border border-white/20"><span className="material-symbols-outlined text-sm">notifications</span></button>}
-          <button onClick={(e) => { e.stopPropagation(); onToggleMute(); }} className={`p-1 rounded bg-black/50 text-white border border-white/20 hover:bg-black/70 ${isMuted ? 'text-red-400' : 'text-green-400'}`}><span className="material-symbols-outlined text-sm">{isMuted ? 'volume_off' : 'volume_up'}</span></button>
+          {!permissionGranted && <button onClick={(e)=>{e.stopPropagation(); onRequestPerm();}} className="p-1.5 rounded bg-blue-500 text-white border border-white/20 active:scale-95"><span className="material-symbols-outlined text-sm">notifications</span></button>}
+          <button onClick={(e) => { e.stopPropagation(); onToggleMute(); }} className={`p-1.5 rounded bg-black/50 text-white border border-white/20 hover:bg-black/70 active:scale-95 ${isMuted ? 'text-red-400' : 'text-green-400'}`}><span className="material-symbols-outlined text-sm">{isMuted ? 'volume_off' : 'volume_up'}</span></button>
       </div>
       <div className="flex justify-between items-start mb-4 relative z-30 pointer-events-none"><div className="flex flex-col gap-2 w-1/2"><StatBar icon="nutrition" value={dragon.hunger} /><StatBar icon="favorite" value={dragon.happiness} /></div><div className="flex flex-col gap-2 w-1/2 items-end"><StatBar icon="cleaning_services" value={dragon.hygiene} reverse /><StatBar icon="bolt" value={dragon.energy} reverse /></div></div>
-      <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">{Array.from({length: dragon.poops}).map((_, i) => <div key={i} className="absolute text-xl" style={{ bottom: '20%', left: `${20 + i*15}%` }}>💩</div>)}<div className="absolute transition-transform duration-75" style={{ left: `${dracoPos.x}%`, top: `${dracoPos.y}%`, width: '160px', height: '160px', transform: `translate(-50%, -50%)` }}><div onClick={(e) => { e.stopPropagation(); onPet(); }} className="w-full h-full cursor-pointer pointer-events-auto"><ProceduralDragon stage={dragon.stage} type={dragon.type} mode={dragon.isSleeping ? 'sleepy' : 'idle'} accessory={dragon.equippedAccessory} direction={targetPos.x < dracoPos.x ? -1 : 1} isMoving={isMoving} /></div>{dragon.isSleeping && <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-2 rounded text-[10px]">Zzz...</div>}</div></div>
+      <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
+        {Array.from({length: dragon.poops}).map((_, i) => <div key={i} className="absolute text-xl" style={{ bottom: '20%', left: `${20 + i*15}%` }}>💩</div>)}
+        <div className="absolute transition-transform duration-75" style={{ left: `${dracoPos.x}%`, top: `${dracoPos.y}%`, width: '160px', height: '160px', transform: `translate(-50%, -50%)` }}>
+          <div 
+            onClick={(e) => { e.stopPropagation(); onPet(); }} 
+            onPointerMove={handlePointerPet}
+            className="w-full h-full cursor-pointer pointer-events-auto touch-none"
+            title="Draco'yu parmağınla okşa!"
+          >
+            <ProceduralDragon stage={dragon.stage} type={dragon.type} mode={dragon.isSleeping ? 'sleepy' : 'idle'} accessory={dragon.equippedAccessory} direction={targetPos.x < dracoPos.x ? -1 : 1} isMoving={isMoving} />
+          </div>
+          {dragon.isSleeping ? (
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-2 py-0.5 rounded text-[9px] whitespace-nowrap shadow-pixel animate-pulse">
+              💤 Zzz...
+            </div>
+          ) : dragon.hunger < 25 ? (
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-2 py-0.5 rounded text-[8px] whitespace-nowrap shadow-pixel animate-bounce">
+              🍖 Acıktım!
+            </div>
+          ) : dragon.hygiene < 30 ? (
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-700 text-white px-2 py-0.5 rounded text-[8px] whitespace-nowrap shadow-pixel">
+              🧼 Yıkanalım!
+            </div>
+          ) : dragon.happiness > 85 ? (
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-pink-600/90 text-white px-2 py-0.5 rounded text-[8px] whitespace-nowrap shadow-pixel">
+              ❤️ Seni Seviyorum!
+            </div>
+          ) : null}
+        </div>
+      </div>
       <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-2 z-40 pointer-events-auto">
-          <div className="flex justify-between items-center bg-black/20 p-1 rounded backdrop-blur-sm"><div className="flex gap-2"><button onClick={(e) => {e.stopPropagation(); onNavigate(Screen.STATS);}} className="hover:bg-black/10 p-1 rounded"><span className="material-symbols-outlined">bar_chart</span></button><button onClick={(e) => {e.stopPropagation(); onNavigate(Screen.MARKET);}} className="hover:bg-black/10 p-1 rounded"><span className="material-symbols-outlined">storefront</span></button><button onClick={(e) => {e.stopPropagation(); onNavigate(Screen.GARDEN);}} className="hover:bg-black/10 p-1 rounded text-green-300"><span className="material-symbols-outlined">potted_plant</span></button><button onClick={(e) => {e.stopPropagation(); onNavigate(Screen.ARENA);}} className="hover:bg-black/10 p-1 rounded text-red-300"><span className="material-symbols-outlined">swords</span></button><button onClick={(e) => {e.stopPropagation(); setShowQuests(true);}} className="hover:bg-black/10 p-1 rounded relative"><span className="material-symbols-outlined">assignment</span>{quests.some((q:any) => q.completed && !q.rewardClaimed) && <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full animate-ping"/>}</button></div>{activeToy && <div className="text-xs animate-pulse text-yellow-500 bg-black/50 px-2 rounded">OYUN MODU (Tıkla!)</div>}</div>
-        <div className="grid grid-cols-4 gap-2"><button onClick={(e) => { e.stopPropagation(); setShowInventory(true); }} className="flex flex-col items-center p-2 border-2 border-lcd-fg bg-lcd-bg shadow-pixel active:translate-y-1"><span className="material-symbols-outlined">backpack</span></button><button onClick={(e) => { e.stopPropagation(); setShowMiniGame(true); }} className="flex flex-col items-center p-2 border-2 border-lcd-fg bg-lcd-bg shadow-pixel active:translate-y-1"><span className="material-symbols-outlined">sports_esports</span></button><button onClick={(e) => { e.stopPropagation(); onAction({ type: 'CLEAN' }); }} className="flex flex-col items-center p-2 border-2 border-lcd-fg bg-lcd-bg shadow-pixel active:translate-y-1"><span className="material-symbols-outlined">soap</span></button><button onClick={(e) => { e.stopPropagation(); onAction({ type: 'SLEEP' }); }} className="flex flex-col items-center p-2 border-2 border-lcd-fg bg-lcd-bg shadow-pixel active:translate-y-1"><span className="material-symbols-outlined">bedtime</span></button></div>
+          <div className="flex justify-between items-center bg-black/20 p-1 rounded backdrop-blur-sm">
+            <div className="flex gap-2">
+              <button onClick={(e) => {e.stopPropagation(); Haptics.tap(); onNavigate(Screen.STATS);}} className="hover:bg-black/10 p-1 rounded active:scale-95"><span className="material-symbols-outlined">bar_chart</span></button>
+              <button onClick={(e) => {e.stopPropagation(); Haptics.tap(); onNavigate(Screen.MARKET);}} className="hover:bg-black/10 p-1 rounded active:scale-95"><span className="material-symbols-outlined">storefront</span></button>
+              <button onClick={(e) => {e.stopPropagation(); Haptics.tap(); onNavigate(Screen.GARDEN);}} className="hover:bg-black/10 p-1 rounded text-green-300 active:scale-95"><span className="material-symbols-outlined">potted_plant</span></button>
+              <button onClick={(e) => {e.stopPropagation(); Haptics.tap(); onNavigate(Screen.ARENA);}} className="hover:bg-black/10 p-1 rounded text-red-300 active:scale-95"><span className="material-symbols-outlined">swords</span></button>
+              <button onClick={(e) => {e.stopPropagation(); Haptics.tap(); setShowQuests(true);}} className="hover:bg-black/10 p-1 rounded relative active:scale-95"><span className="material-symbols-outlined">assignment</span>{quests.some((q:any) => q.completed && !q.rewardClaimed) && <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full animate-ping"/>}</button>
+            </div>
+            {activeToy && <div className="text-xs animate-pulse text-yellow-500 bg-black/50 px-2 rounded">OYUN MODU (Tıkla!)</div>}
+          </div>
+        <div className="grid grid-cols-4 gap-2">
+          <button onClick={(e) => { e.stopPropagation(); Haptics.tap(); setShowInventory(true); }} className="flex flex-col items-center p-2 border-2 border-lcd-fg bg-lcd-bg shadow-pixel active:translate-y-1"><span className="material-symbols-outlined">backpack</span></button>
+          <button onClick={(e) => { e.stopPropagation(); Haptics.tap(); setShowMiniGame(true); }} className="flex flex-col items-center p-2 border-2 border-lcd-fg bg-lcd-bg shadow-pixel active:translate-y-1"><span className="material-symbols-outlined">sports_esports</span></button>
+          <button onClick={(e) => { e.stopPropagation(); Haptics.mediumTap(); onAction({ type: 'CLEAN' }); }} className="flex flex-col items-center p-2 border-2 border-lcd-fg bg-lcd-bg shadow-pixel active:translate-y-1"><span className="material-symbols-outlined">soap</span></button>
+          <button onClick={(e) => { e.stopPropagation(); Haptics.tap(); onAction({ type: 'SLEEP' }); }} className="flex flex-col items-center p-2 border-2 border-lcd-fg bg-lcd-bg shadow-pixel active:translate-y-1"><span className="material-symbols-outlined">bedtime</span></button>
+        </div>
       </div>
       {showInventory && <InventoryModal inventory={gameState.inventory} onClose={() => setShowInventory(false)} onSelect={(i: Item) => { if(i.type === 'TOY') { activateToy(i.id); } else { setShowInventory(false); onAction({ type: 'USE_ITEM', item: i }); if(i.type==='ACCESSORY') onAction({type:'EQUIP', item:i}); } }} />}
       {showMiniGame && <MiniGameModal onClose={() => setShowMiniGame(false)} onPlayToy={() => activateToy('ball')} onComplete={(res: 'WIN'|'LOSE'|'DRAW', game: MiniGameType) => { onMiniGameComplete(res, game); setShowMiniGame(false); }} />}
